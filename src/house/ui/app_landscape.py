@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
 from typing import Optional
 
@@ -68,6 +69,39 @@ def _played_label(year: int, month: int, xun: int) -> str:
     y, rem = divmod(total, B.MONTHS_PER_YEAR * B.XUN_PER_MONTH)
     m, q = divmod(rem, B.XUN_PER_MONTH)
     return f"已游玩 {y}年{m}月{q}旬"
+
+
+def _distance_to(world, cid: int, ancestor_id: Optional[int]) -> Optional[int]:
+    if ancestor_id is None:
+        return None
+    seen = {cid}
+    queue = deque([(cid, 0)])
+    while queue:
+        x, d = queue.popleft()
+        if x == ancestor_id:
+            return d
+        char = world.characters.get(x)
+        if char is None:
+            continue
+        for pid in (char.father, char.mother):
+            if pid is not None and pid not in seen:
+                seen.add(pid)
+                queue.append((pid, d + 1))
+    return None
+
+
+def _relation_to(world, child: Character, player_id: Optional[int]) -> str:
+    d = _distance_to(world, child.id, player_id)
+    if d == 1:
+        return "儿子" if child.gender == "male" else "女儿"
+    if d == 2:
+        for pid in (child.father, child.mother):
+            parent = world.get(pid)
+            if parent is not None and _distance_to(world, parent.id, player_id) == 1:
+                if parent.gender == "male":
+                    return "孙子" if child.gender == "male" else "孙女"
+                return "外孙" if child.gender == "male" else "外孙女"
+    return "后代"
 
 
 class MainScreen(Screen):
@@ -142,7 +176,10 @@ class MainScreen(Screen):
         if child is None:
             body.update("（对象已不在）")
         else:
-            body.update(f"{child.name} 出生了，给这个孩子起个名字吧。推荐名：{entry['suggested']}")
+            father = world.name_of(child.father)
+            mother = world.name_of(child.mother)
+            rel = _relation_to(world, child, world.player_id)
+            body.update(f"{father} 与 {mother} 的孩子出生了，是你的{rel}。推荐名：{entry['suggested']}")
         if self._event_child != entry["child_id"]:
             self._event_child = entry["child_id"]
             inp.value = entry["suggested"]
@@ -305,16 +342,27 @@ class MarriageScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Static("[b]选择一位婚配对象[/b]（仅显示可婚配者）")
         with VerticalScroll(id="marry_list"):
-            player = self.app.world.player
-            cands = marriage.candidates(self.app.world, player.id) if player else []
-            if not cands:
-                yield Static("（暂无可婚配对象；可推进时间等新的人成年）")
-            for c in cands:
-                dyn = self.app.world.dynasty_name_of(c.id)
-                gender = "♂" if c.gender == "male" else "♀"
-                yield Button(
-                    f"{gender} {c.name} · {dyn} · {c.age}岁 · {_fmt_attrs(c)}", id=f"m_{c.id}"
-                )
+            world = self.app.world
+            player = world.player
+            if player is None:
+                yield Static("（无家主）")
+            else:
+                spouse = world.get(player.spouse) if player.spouse else None
+                consorts = 1 if (spouse is not None and spouse.is_alive) else 0
+                if consorts >= B.CONSORT_LIMIT:
+                    yield Static(
+                        f"（已达眷属上限：配偶 {consorts}/{B.CONSORT_LIMIT}，暂不能再婚）"
+                    )
+                else:
+                    cands = marriage.candidates(world, player.id)
+                    if not cands:
+                        yield Static("（暂无可婚配对象；可推进时间等新的人成年）")
+                    for c in cands:
+                        dyn = world.dynasty_name_of(c.id)
+                        gender = "♂" if c.gender == "male" else "♀"
+                        yield Button(
+                            f"{gender} {c.name} · {dyn} · {c.age}岁 · {_fmt_attrs(c)}", id=f"m_{c.id}"
+                        )
         yield Button("返回", id="marry_back")
         yield Footer()
 

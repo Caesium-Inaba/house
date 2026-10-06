@@ -86,6 +86,9 @@ CHILDHOOD_END = 16
 CHILDHOOD_PARENT_GAIN = 4                  # 6-16 岁可从父母处获得的属性上限
 POTENTIAL_CLAMP = (0, 40)
 
+# ── 婚姻 ────────────────────────────────────────────────
+CONSORT_LIMIT = 1                          # 眷属上限（配偶数；未来可含妾/次妻）
+
 # ── 资源（占位锚点，M3+ 细化） ───────────────────────────
 PRESTIGE_YEARLY_BASE = 12.0
 PIETY_YEARLY_BASE = 6.0
