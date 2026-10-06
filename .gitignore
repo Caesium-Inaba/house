@@ -5,9 +5,11 @@ build/
 dist/
 wheels/
 *.egg-info
+*.spec
 
 # Virtual environments
 .venv
 
 # 游戏存档
 save.json
+saves/

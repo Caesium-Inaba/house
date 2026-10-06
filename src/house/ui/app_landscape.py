@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from collections import deque
-from pathlib import Path
 from typing import Optional
 
 from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import Screen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Input, Static, Tree
 
 from .. import balance as B
@@ -18,8 +17,6 @@ from ..core import marriage, save, sim
 from ..core import traits as T
 from ..core.models import Character
 from ..core.scenario import build_default_world
-
-SAVE_PATH = Path("save.json")
 
 
 def _fmt_attrs(char: Character) -> str:
@@ -202,6 +199,19 @@ class MainScreen(Screen):
         if event.input.id == "event_input":
             self._confirm_naming()
 
+    def _do_save(self, name: Optional[str]) -> None:
+        if not name:
+            return
+        save.save_named(self.app.world, name)
+        self.app.notify(f"已存档：{name}")
+
+    def _do_load(self, path) -> None:
+        if path is None:
+            return
+        self.app.world = save.load_world(path)
+        self.app.notify("已读档")
+        self.refresh_view()
+
     def refresh_char(self) -> None:
         world = self.app.world
         cid = self.viewing_id if self.viewing_id is not None else world.player_id
@@ -233,14 +243,11 @@ class MainScreen(Screen):
             self.app.push_screen(MarriageScreen())
             return
         elif bid == "save":
-            save.save_world(self.app.world, SAVE_PATH)
-            self.app.notify(f"已存档到 {SAVE_PATH}")
+            self.app.push_screen(SaveDialog(save.default_name(self.app.world)), self._do_save)
+            return
         elif bid == "load":
-            if SAVE_PATH.exists():
-                self.app.world = save.load_world(SAVE_PATH)
-                self.app.notify("已读档")
-            else:
-                self.app.notify("没有找到存档", severity="warning")
+            self.app.push_screen(LoadDialog(), self._do_load)
+            return
         elif bid == "event_confirm":
             self._confirm_naming()
             return
@@ -382,6 +389,82 @@ class MarriageScreen(Screen):
                 self.app.notify("无法成婚", severity="warning")
 
 
+class SaveDialog(ModalScreen):
+    def __init__(self, default_name: str) -> None:
+        super().__init__()
+        self._default = default_name
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Static("[b]存档[/b]", id="dialog_title")
+            yield Input(value=self._default, placeholder="存档名", id="save_name")
+            yield Static("", id="save_warn")
+            with Horizontal(id="dialog_btns"):
+                yield Button("保存", id="save_ok", variant="primary")
+                yield Button("覆盖保存", id="save_over", variant="warning")
+                yield Button("取消", id="save_cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#save_over", Button).display = False
+
+    def _propose(self) -> None:
+        name = self.query_one("#save_name", Input).value.strip()
+        if not name:
+            return
+        if save.save_exists(name):
+            self.query_one("#save_warn", Static).update(
+                "[yellow]同名存档已存在，点「覆盖保存」确认覆盖[/yellow]"
+            )
+            self.query_one("#save_over", Button).display = True
+            return
+        self.dismiss(name)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        bid = event.button.id
+        if bid in ("save_ok", "save_over"):
+            name = self.query_one("#save_name", Input).value.strip()
+            if bid == "save_over" and name:
+                self.dismiss(name)
+            else:
+                self._propose()
+        elif bid == "save_cancel":
+            self.dismiss(None)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._propose()
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+
+class LoadDialog(ModalScreen):
+    def __init__(self) -> None:
+        super().__init__()
+        self._saves = save.list_saves()
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Static("[b]读档[/b]", id="dialog_title")
+            with VerticalScroll(id="load_list"):
+                if not self._saves:
+                    yield Static("（暂无存档）")
+                for i, s in enumerate(self._saves):
+                    yield Button(f"{s['name']}  ·  {s['year']}年{s['month']}月", id=f"load_{i}")
+            yield Button("取消", id="load_cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        bid = event.button.id or ""
+        if bid == "load_cancel":
+            self.dismiss(None)
+        elif bid.startswith("load_"):
+            self.dismiss(self._saves[int(bid[5:])]["path"])
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key == "escape":
+            self.dismiss(None)
+
+
 class HouseApp(App):
     CSS = """
     Screen { layout: vertical; }
@@ -408,6 +491,19 @@ class HouseApp(App):
     #event_pane { height: 38.2%; }
     #event_title { height: auto; }
     #event_body { height: auto; }
+    SaveDialog, LoadDialog { align: center middle; }
+    #dialog {
+        width: 64;
+        height: auto;
+        max-height: 80%;
+        border: thick $primary;
+        background: $surface;
+        padding: 1 2;
+    }
+    #dialog_title { height: auto; }
+    #save_warn { height: auto; }
+    #dialog_btns { height: auto; }
+    #load_list { height: auto; max-height: 16; }
     """
 
     def __init__(self, world=None):
@@ -415,6 +511,7 @@ class HouseApp(App):
         self.world = world or build_default_world()
 
     def on_mount(self) -> None:
+        save.migrate_legacy()
         self.push_screen(MainScreen())
 
 
