@@ -102,6 +102,10 @@ def childbirth(world: World, mother: Character) -> None:
     names = "、".join(k.name for k in kids)
     world.add_log(f"👶 {mother.name} 诞下 {names}。")
 
+    for k in kids:
+        if world.is_descendant(k.id, world.player_id):
+            world.naming_queue.append({"child_id": k.id, "suggested": k.name})
+
     risk = B.CHILDBED_DEATH_BASE + max(0, mother.age - 30) * B.CHILDBED_DEATH_AGE_FACTOR
     if world.rng.random() < risk:
         from .health import kill

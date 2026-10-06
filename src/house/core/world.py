@@ -20,6 +20,7 @@ class World:
     next_dynasty_id: int = 1
     rng: random.Random = field(default_factory=random.Random)
     log: list[str] = field(default_factory=list)
+    naming_queue: list[dict] = field(default_factory=list)
     over: bool = False
     over_reason: str = ""
     gender_law: str = "male_preference"  # male_preference / equal / female_preference
@@ -80,3 +81,25 @@ class World:
     def is_ruler(self, char: Character) -> bool:
         """M2 占位：玩家本人视为统治者，其余为非统治者（生育力 -15% 修正）。"""
         return char.id == self.player_id
+
+    def is_descendant(self, cid: int, ancestor_id: Optional[int]) -> bool:
+        """cid 是否为 ancestor 的血亲后代（沿父母上溯，含外嫁女儿所生）。"""
+        if ancestor_id is None:
+            return False
+        seen: set[int] = set()
+        stack = [cid]
+        while stack:
+            x = stack.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            if x == ancestor_id:
+                return True
+            ch = self.characters.get(x)
+            if ch is None:
+                continue
+            if ch.father is not None:
+                stack.append(ch.father)
+            if ch.mother is not None:
+                stack.append(ch.mother)
+        return False

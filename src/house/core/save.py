@@ -36,6 +36,7 @@ def world_to_dict(world: World) -> dict:
         "characters": [c.to_dict() for c in world.characters.values()],
         "dynasties": [d.to_dict() for d in world.dynasties.values()],
         "log": list(world.log),
+        "naming_queue": [dict(e) for e in world.naming_queue],
     }
 
 
@@ -56,6 +57,7 @@ def world_from_dict(data: dict) -> World:
         dyn = Dynasty.from_dict(ddata)
         world.dynasties[dyn.id] = dyn
     world.log = list(data.get("log", []))
+    world.naming_queue = [dict(e) for e in data.get("naming_queue", [])]
     world.refresh_ages()
     return world
 

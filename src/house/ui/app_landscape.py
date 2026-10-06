@@ -10,7 +10,7 @@ from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Static, Tree
+from textual.widgets import Button, Footer, Input, Static, Tree
 
 from .. import balance as B
 from ..core import marriage, save, sim
@@ -39,8 +39,9 @@ def _char_panel(world, char: Optional[Character]) -> str:
     state = "在世" if char.is_alive else "已故"
     spouse = world.name_of(char.spouse) if char.spouse else "未婚"
     preg = "  怀孕中" if char.is_pregnant else ""
+    name = f"[b blue]{char.name}[/b blue]" if char.id == world.player_id else f"[b]{char.name}[/b]"
     return (
-        f"[b]{char.name}[/b]  {world.dynasty_name_of(char.id)}\n"
+        f"{name}  {world.dynasty_name_of(char.id)}\n"
         f"{gender} {char.age}岁  {state}{edu}\n"
         f"健康：{char.health_tier}（{char.health:.2f}）\n"
         f"{_fmt_attrs(char)}\n"
@@ -51,12 +52,15 @@ def _char_panel(world, char: Optional[Character]) -> str:
     )
 
 
-def _node_label(char: Character) -> Text:
+def _node_label(char: Character, player_id: Optional[int] = None) -> Text:
     gender = "♂" if char.gender == "male" else "♀"
     text = f"{gender} {char.name}（{char.age}岁）"
-    if char.is_alive:
-        return Text(text)
-    return Text(text, style="strike dim")
+    styles = []
+    if not char.is_alive:
+        styles.append("strike dim")
+    if char.id == player_id:
+        styles.append("bold blue")
+    return Text(text, style=" ".join(styles)) if styles else Text(text)
 
 
 def _played_label(year: int, month: int, xun: int) -> str:
@@ -71,6 +75,7 @@ class MainScreen(Screen):
         super().__init__()
         self.viewing_id: Optional[int] = None
         self.show_played = False
+        self._event_child: Optional[int] = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):
@@ -79,8 +84,14 @@ class MainScreen(Screen):
                 with Horizontal(id="left_actions"):
                     yield Button("家族树", id="family")
                     yield Button("✕", id="char_close", classes="sq")
-            with VerticalScroll(id="mid", classes="col"):
-                yield Static(id="events")
+            with Vertical(id="mid", classes="col"):
+                with VerticalScroll(id="log_pane"):
+                    yield Static(id="events")
+                with Vertical(id="event_pane"):
+                    yield Static(id="event_title")
+                    yield Static(id="event_body")
+                    yield Input(placeholder="输入名字", id="event_input")
+                    yield Button("确认", id="event_confirm", variant="primary")
             with Vertical(id="right", classes="col"):
                 yield Static(id="reserved")
                 with Horizontal(id="right_actions"):
@@ -103,8 +114,56 @@ class MainScreen(Screen):
     def refresh_view(self) -> None:
         self.refresh_char()
         self.refresh_time()
+        self.refresh_events()
         log = self.app.world.log[-40:]
         self.query_one("#events", Static).update("\n".join(reversed(log)) or "（尚无大事发生）")
+
+    def refresh_events(self) -> None:
+        world = self.app.world
+        busy = bool(world.naming_queue)
+        self.query_one("#tick_xun", Button).disabled = busy
+        self.query_one("#tick_year", Button).disabled = busy
+        title = self.query_one("#event_title", Static)
+        body = self.query_one("#event_body", Static)
+        inp = self.query_one("#event_input", Input)
+        btn = self.query_one("#event_confirm", Button)
+        if not world.naming_queue:
+            title.update("")
+            body.update("")
+            inp.display = False
+            btn.display = False
+            self._event_child = None
+            return
+        entry = world.naming_queue[0]
+        child = world.get(entry["child_id"])
+        inp.display = True
+        btn.display = True
+        title.update("[b]为新生儿起名[/b]")
+        if child is None:
+            body.update("（对象已不在）")
+        else:
+            body.update(f"{child.name} 出生了，给这个孩子起个名字吧。推荐名：{entry['suggested']}")
+        if self._event_child != entry["child_id"]:
+            self._event_child = entry["child_id"]
+            inp.value = entry["suggested"]
+            inp.focus()
+
+    def _confirm_naming(self) -> None:
+        world = self.app.world
+        if not world.naming_queue:
+            return
+        entry = world.naming_queue[0]
+        child = world.get(entry["child_id"])
+        value = self.query_one("#event_input", Input).value.strip()
+        if child is not None and value:
+            child.name = value
+        world.naming_queue.pop(0)
+        self._event_child = None
+        self.refresh_view()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "event_input":
+            self._confirm_naming()
 
     def refresh_char(self) -> None:
         world = self.app.world
@@ -127,7 +186,7 @@ class MainScreen(Screen):
         if bid == "tick_xun":
             sim.tick_xun(self.app.world)
         elif bid == "tick_year":
-            sim.advance(self.app.world, B.XUN_PER_MONTH * B.MONTHS_PER_YEAR)
+            sim.advance(self.app.world, B.XUN_PER_MONTH * B.MONTHS_PER_YEAR, stop_on_naming=True)
         elif bid == "family":
             self.app.push_screen(FamilyTreeScreen())
             return
@@ -145,6 +204,9 @@ class MainScreen(Screen):
                 self.app.notify("已读档")
             else:
                 self.app.notify("没有找到存档", severity="warning")
+        elif bid == "event_confirm":
+            self._confirm_naming()
+            return
         elif bid == "quit":
             self.app.exit()
             return
@@ -179,13 +241,14 @@ class FamilyTreeScreen(Screen):
             return
         root = self._paternal_root(world, player)
         self._line_ids = self._line_to(world, player)
+        self._player_id = player.id
         grandkids: set[int] = set()
         for cid in player.children:
             child = world.get(cid)
             if child is not None:
                 grandkids |= set(child.children)
         self._expand_ids = self._line_ids | set(player.children) | grandkids
-        tree.root.label = _node_label(root)
+        tree.root.label = _node_label(root, self._player_id)
         tree.root.data = root.id
         self._add_branch(world, root, tree.root)
         tree.root.expand()
@@ -216,7 +279,7 @@ class FamilyTreeScreen(Screen):
             child = world.get(cid)
             if child is None:
                 continue
-            sub = node.add(_node_label(child), data=child.id)
+            sub = node.add(_node_label(child, self._player_id), data=child.id)
             self._add_branch(world, child, sub, depth + 1)
             if child.id in self._expand_ids:
                 sub.expand()
@@ -293,6 +356,10 @@ class HouseApp(App):
     #tree_pane { width: 2fr; }
     #tree { height: 1fr; }
     #marry_list { height: 1fr; }
+    #log_pane { height: 61.8%; }
+    #event_pane { height: 38.2%; }
+    #event_title { height: auto; }
+    #event_body { height: auto; }
     """
 
     def __init__(self, world=None):

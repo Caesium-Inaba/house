@@ -24,10 +24,12 @@ def tick_xun(world: World) -> None:
     inheritance.handle_player_death(world)
 
 
-def advance(world: World, xuns: int) -> None:
+def advance(world: World, xuns: int, stop_on_naming: bool = False) -> None:
     for _ in range(xuns):
         tick_xun(world)
         if world.over:
+            break
+        if stop_on_naming and world.naming_queue:
             break
 
 
