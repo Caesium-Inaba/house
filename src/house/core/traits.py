@@ -19,6 +19,7 @@ def load_json(name: str) -> Any:
 def _build_traits() -> dict[str, dict]:
     raw = load_json("traits.json")
     db: dict[str, dict] = dict(raw.get("traits", {}))
+    db.update(raw.get("personality", {}))
 
     # 展开等级化先天特质组：intellect_n3 / intellect_p2 ...
     for group, spec in raw.get("congenital_groups", {}).items():

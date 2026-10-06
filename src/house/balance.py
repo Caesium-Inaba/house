@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 # ── 时间 ────────────────────────────────────────────────
+START_YEAR = 1066
 XUN_PER_MONTH = 3
 MONTHS_PER_YEAR = 12
 XUN_NAMES = ("上旬", "中旬", "下旬")
