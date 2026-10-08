@@ -35,6 +35,13 @@ class Character:
     education: Optional[str] = None
     health: float = 5.0
 
+    # ── 教育与教养（CK3） ──
+    childhood_trait: Optional[str] = None   # 6 岁显现的童年特质 id
+    education_focus: Optional[str] = None   # 教育方向（6 岁定）
+    education_score: int = 0                # 教育得分（年度判定累计）
+    guardian: Optional[int] = None          # 监护人 id
+    betrothed: Optional[int] = None         # 婚约对象 id
+
     money: float = 0.0
     prestige: float = 0.0
     piety: float = 0.0
@@ -99,6 +106,11 @@ class Character:
             "genes": {k: v for k, v in self.genes.items()},
             "traits": sorted(self.traits),
             "education": self.education,
+            "childhood_trait": self.childhood_trait,
+            "education_focus": self.education_focus,
+            "education_score": self.education_score,
+            "guardian": self.guardian,
+            "betrothed": self.betrothed,
             "health": self.health,
             "money": self.money,
             "prestige": self.prestige,
@@ -129,6 +141,11 @@ class Character:
             genes={k: int(v) for k, v in data.get("genes", {}).items()},
             traits=set(data.get("traits", [])),
             education=data.get("education"),
+            childhood_trait=data.get("childhood_trait"),
+            education_focus=data.get("education_focus"),
+            education_score=data.get("education_score", 0),
+            guardian=data.get("guardian"),
+            betrothed=data.get("betrothed"),
             health=data.get("health", 5.0),
             money=data.get("money", 0.0),
             prestige=data.get("prestige", 0.0),
@@ -149,6 +166,7 @@ class Dynasty:
     members: list[int] = field(default_factory=list)
     head: Optional[int] = None
     renown: float = 0.0
+    legacies: dict[str, int] = field(default_factory=dict)  # 传承树 id -> 等级
 
     def to_dict(self) -> dict:
         return {
@@ -158,6 +176,7 @@ class Dynasty:
             "members": list(self.members),
             "head": self.head,
             "renown": self.renown,
+            "legacies": dict(self.legacies),
         }
 
     @classmethod
@@ -169,6 +188,7 @@ class Dynasty:
             members=list(data.get("members", [])),
             head=data.get("head"),
             renown=data.get("renown", 0.0),
+            legacies={str(k): int(v) for k, v in data.get("legacies", {}).items()},
         )
 
 

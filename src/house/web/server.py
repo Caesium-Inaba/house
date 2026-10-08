@@ -21,10 +21,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import balance as B
-from ..core import marriage, save, sim
+from ..core import legacy, marriage, save, sim
 from ..core.scenario import build_default_world
 from ..core.world import World
-from .presenter import build_snapshot, marriage_candidate_list
+from .presenter import (
+    betrothal_pools_payload,
+    build_snapshot,
+    marriage_candidate_list,
+)
 
 XUNS_PER_YEAR = 3 * 12
 
@@ -40,6 +44,22 @@ class NamingBody(BaseModel):
 
 class MarriageBody(BaseModel):
     target_id: int
+
+
+class TutoringBody(BaseModel):
+    child_id: int
+    focus: str
+    guardian_id: Optional[int] = None
+
+
+class BetrothalBody(BaseModel):
+    a_id: int
+    b_id: int
+    patrilineal: bool = True
+
+
+class LegacyBody(BaseModel):
+    tree: str
 
 
 class SaveBody(BaseModel):
@@ -164,6 +184,56 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
             "message": "姻缘缔结" if ok else "无法缔结这门婚事",
             "state": snap(),
         }
+
+    @app.get("/api/betrothal/pools")
+    async def get_betrothal_pools() -> dict:
+        return {"ok": True, **betrothal_pools_payload(world())}
+
+    @app.post("/api/betrothal")
+    async def do_betrothal(body: BetrothalBody) -> dict:
+        w = world()
+        ok = marriage.arrange_betrothal(w, body.a_id, body.b_id, patrilineal=body.patrilineal)
+        return {
+            "ok": ok,
+            "message": "婚约已成" if ok else "无法缔结婚约",
+            "state": snap(),
+        }
+
+    @app.post("/api/tutoring")
+    async def do_tutoring(body: TutoringBody) -> dict:
+        w = world()
+        child = w.get(body.child_id)
+        if child is None:
+            raise HTTPException(400, "找不到该孩子")
+        idx = next(
+            (i for i, e in enumerate(w.tutoring_queue) if e.get("child_id") == body.child_id), None
+        )
+        if idx is None:
+            raise HTTPException(400, "该孩子不在教养队列中")
+        if body.focus not in B.ATTRS:
+            raise HTTPException(400, "未知的教育方向")
+        guardian = w.get(body.guardian_id)
+        child.education_focus = body.focus
+        child.guardian = guardian.id if guardian is not None else None
+        w.tutoring_queue.pop(idx)
+        from ..core import traits as T
+
+        focus_label = T.EDUCATION.get("routes", {}).get(body.focus, body.focus)
+        msg = f"{child.name} 开蒙（{focus_label}）"
+        if guardian is not None:
+            msg += f"，师从 {guardian.name}"
+        w.add_log(f"📖 {msg}。")
+        actors = [child.id] + ([guardian.id] if guardian is not None else [])
+        w.add_event("tutoring", f"{msg}。", actors)
+        return {"ok": True, "message": msg, "state": snap()}
+
+    @app.post("/api/legacy")
+    async def do_legacy(body: LegacyBody) -> dict:
+        w = world()
+        player = w.player
+        dyn = player.dynasty if player else None
+        ok, msg = legacy.buy(w, dyn, body.tree)
+        return {"ok": ok, "message": msg, "state": snap()}
 
     @app.get("/api/saves")
     async def get_saves() -> dict:

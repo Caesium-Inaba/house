@@ -137,10 +137,38 @@ export default function CharacterCard() {
           <>
             <div className="divider-label">心性 · 教养</div>
             <div className="chips">
+              {char.childhood_trait && !char.education_name && (
+                <span className="chip" style={{ borderColor: 'var(--steel)', color: 'var(--steel)' }}>
+                  {char.childhood_trait.name}
+                </span>
+              )}
               {char.education_name && <span className="chip" style={{ borderColor: 'var(--gold-dim)', color: 'var(--gold)' }}>{char.education_name}</span>}
               {char.traits.map((t) => (
                 <span key={t.id} className="chip">{t.name}</span>
               ))}
+            </div>
+          </>
+        )}
+
+        {/* 教养安排（未成年在学者） */}
+        {char.alive && !char.is_adult && char.education_focus && (
+          <>
+            <div className="divider-label">教养</div>
+            <div className="kv">
+              <span className="k">开蒙方向</span>
+              <span className="v">{char.education_focus_label ?? '—'}</span>
+            </div>
+            <div className="kv">
+              <span className="k">监护人</span>
+              <span className="v">
+                {char.guardian_name
+                  ? <span className="link" onClick={() => char.guardian && select(char.guardian)}>{char.guardian_name}</span>
+                  : '尚无（教育受损）'}
+              </span>
+            </div>
+            <div className="kv">
+              <span className="k">素养进度</span>
+              <span className="v">{char.education_score} / 22</span>
             </div>
           </>
         )}
@@ -175,6 +203,21 @@ export default function CharacterCard() {
                 </span>
               </div>
             ))}
+          </>
+        )}
+
+        {/* 婚约（CK3） */}
+        {char.betrothed && (
+          <>
+            <div className="divider-label">婚约</div>
+            <div className="roster-item" onClick={() => char.betrothed && select(char.betrothed.id)}>
+              <span className="r-name">
+                ♍ {char.betrothed.name ?? '貌合之人'}
+                <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>
+                  {' · '}{char.betrothed.patrilineal === false ? '母系' : '父系'} · 满 16 岁成婚
+                </span>
+              </span>
+            </div>
           </>
         )}
 

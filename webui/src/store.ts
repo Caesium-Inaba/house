@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import type { ApiResponse, Snapshot } from './types'
 import { api } from './api/client'
 
-export type ModalKind = 'naming' | 'marriage' | 'saves' | 'new' | null
+export type ModalKind = 'naming' | 'tutoring' | 'marriage' | 'saves' | 'new' | null
 
 export interface Toast {
   id: number

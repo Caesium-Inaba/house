@@ -8,6 +8,7 @@ import Chronicle from './components/Chronicle'
 import DynastyPanel from './components/DynastyPanel'
 import FamilyTree from './components/FamilyTree'
 import NamingModal from './components/modals/NamingModal'
+import TutoringModal from './components/modals/TutoringModal'
 import MarriageModal from './components/modals/MarriageModal'
 import SaveModal from './components/modals/SaveModal'
 import NewGameModal from './components/modals/NewGameModal'
@@ -98,6 +99,7 @@ export default function App() {
 
       <FamilyTree />
       <NamingModal />
+      <TutoringModal />
       <MarriageModal />
       <SaveModal />
       <NewGameModal />

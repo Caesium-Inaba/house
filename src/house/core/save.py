@@ -73,6 +73,8 @@ def world_to_dict(world: World) -> dict:
         "log": list(world.log),
         "events": [dict(e) for e in world.events],
         "naming_queue": [dict(e) for e in world.naming_queue],
+        "tutoring_queue": [dict(e) for e in world.tutoring_queue],
+        "betrothals": [dict(e) for e in world.betrothals],
     }
 
 
@@ -98,6 +100,8 @@ def world_from_dict(data: dict) -> World:
         [dict(e) for e in legacy_events] if legacy_events is not None else _events_from_log(world.log)
     )
     world.naming_queue = [dict(e) for e in data.get("naming_queue", [])]
+    world.tutoring_queue = [dict(e) for e in data.get("tutoring_queue", [])]
+    world.betrothals = [dict(e) for e in data.get("betrothals", [])]
     world.refresh_ages()
     return world
 

@@ -11,7 +11,7 @@ import random
 from typing import Any, Optional
 
 from .. import balance as B
-from ..core import inheritance, marriage
+from ..core import inheritance, legacy, marriage
 from ..core import traits as T
 from ..core.models import Character
 from ..core.world import World
@@ -146,6 +146,31 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         dyn = world.dynasties.get(char.dynasty) if char.dynasty is not None else None
         out["culture"] = dyn.culture if dyn else "czech"
         out["culture_label"] = CULTURE_LABELS.get(out["culture"], out["culture"])
+
+    # ── 教养 / 婚约（CK3） ──
+    focus = char.education_focus
+    bd = world.get(char.betrothed)
+    out["childhood_trait"] = (
+        {"id": char.childhood_trait, "name": T.childhood_name(char.childhood_trait),
+         "focus": T.childhood_focus(char.childhood_trait)}
+        if char.childhood_trait else None
+    )
+    out["education_focus"] = focus
+    out["education_focus_label"] = (
+        T.EDUCATION.get("routes", {}).get(focus, focus) if focus else None
+    )
+    out["education_score"] = char.education_score
+    guardian = world.get(char.guardian)
+    out["guardian"] = guardian.id if guardian else None
+    out["guardian_name"] = guardian.name if guardian else None
+    out["betrothed"] = (
+        {"id": char.betrothed, "name": bd.name if bd else None,
+         "patrilineal": not any(
+             e.get("patrilineal") is False and char.id in (e.get("a"), e.get("b"))
+             for e in world.betrothals
+         )}
+        if char.betrothed else None
+    )
     return out
 
 
@@ -216,10 +241,97 @@ def _dynasties(world: World) -> list[dict]:
                 "renown": round(dyn.renown, 1),
                 "members": len(dyn.members),
                 "alive_members": len(alive_members),
+                "legacies": dict(dyn.legacies),
             }
         )
     out.sort(key=lambda d: -d["renown"])
     return out
+
+
+def _tutoring_entries(world: World) -> list[dict]:
+    player = world.player
+    out = []
+    for entry in world.tutoring_queue:
+        child = world.get(entry.get("child_id"))
+        if child is None:
+            continue
+        focus = child.education_focus or "diplomacy"
+        cands = sorted(
+            [
+                c
+                for c in world.alive()
+                if c.dynasty == child.dynasty and c.is_adult and c.id != child.id
+            ],
+            key=lambda g: g.attributes.get(focus, 0) + g.attributes.get("learning", 0) * 0.5,
+            reverse=True,
+        )[:6]
+        guardian_candidates = [
+            {
+                "id": g.id,
+                "name": g.name,
+                "age": g.age,
+                "skill": g.attributes.get(focus, 0),
+                "learning": g.attributes.get("learning", 0),
+                "suggested": i == 0,
+            }
+            for i, g in enumerate(cands)
+        ]
+        out.append(
+            {
+                "child_id": child.id,
+                "name": child.name,
+                "gender": child.gender,
+                "age": child.age,
+                "childhood_trait": (
+                    {"id": child.childhood_trait, "name": T.childhood_name(child.childhood_trait)}
+                    if child.childhood_trait else None
+                ),
+                "relation": _relation(world, player, child) if player else None,
+                "suggested_focus": focus,
+                "focus_options": [
+                    {"key": k, "label": v} for k, v in T.EDUCATION.get("routes", {}).items()
+                ],
+                "guardian_candidates": guardian_candidates,
+            }
+        )
+    return out
+
+
+def betrothal_pools_payload(world: World) -> dict:
+    player = world.player
+    if player is None:
+        return {"own": [], "other": []}
+    own, other = marriage.betrothal_pools(world, player.id)
+    return {
+        "own": [enrich_character(world, c, player) for c in own],
+        "other": [enrich_character(world, c, player) for c in other],
+    }
+
+
+def _legacies_payload(world: World) -> dict:
+    player = world.player
+    dyn = world.dynasties.get(player.dynasty) if player and player.dynasty is not None else None
+    level_of = legacy.level_of
+    trees = []
+    for t in legacy.TREES:
+        lvl = level_of(dyn, t["id"]) if dyn else 0
+        cost = legacy.legacy_cost(lvl) if lvl < legacy.MAX_LEVEL else None
+        trees.append(
+            {
+                "id": t["id"],
+                "label": t["label"],
+                "desc": t["desc"],
+                "level": lvl,
+                "max": legacy.MAX_LEVEL,
+                "cost": cost,
+                "affordable": bool(dyn and cost is not None and dyn.renown >= cost),
+            }
+        )
+    return {
+        "renown": round(dyn.renown) if dyn else 0,
+        "dynasty": dyn.id if dyn else None,
+        "trees": trees,
+    }
 
 
 def marriage_candidate_list(world: World, char_id: int) -> list[dict]:
@@ -251,6 +363,8 @@ def build_snapshot(world: World) -> dict:
         "dynasties": _dynasties(world),
         "events": list(world.events),
         "naming_queue": _naming_entries(world),
+        "tutoring_queue": _tutoring_entries(world),
+        "legacies": _legacies_payload(world),
         "population": {
             "alive": len(alive),
             "total": len(world.characters),

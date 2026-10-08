@@ -56,6 +56,14 @@ export interface CharacterInfo {
   relation: string | null
   culture: string
   culture_label: string
+  /* 教养（CK3） */
+  childhood_trait: { id: string; name: string; focus: string } | null
+  education_focus: string | null
+  education_focus_label: string | null
+  education_score: number
+  guardian: number | null
+  guardian_name: string | null
+  betrothed: { id: number; name: string | null; patrilineal: boolean } | null
 }
 
 export interface EventInfo {
@@ -78,6 +86,41 @@ export interface NamingEntry {
   suggestions: string[]
 }
 
+export interface TutoringEntry {
+  child_id: number
+  name: string
+  gender: 'male' | 'female'
+  age: number
+  childhood_trait: { id: string; name: string } | null
+  relation: string | null
+  suggested_focus: string
+  focus_options: { key: string; label: string }[]
+  guardian_candidates: {
+    id: number
+    name: string
+    age: number
+    skill: number
+    learning: number
+    suggested: boolean
+  }[]
+}
+
+export interface LegacyTree {
+  id: string
+  label: string
+  desc: string
+  level: number
+  max: number
+  cost: number | null
+  affordable: boolean
+}
+
+export interface LegacyInfo {
+  renown: number
+  dynasty: number | null
+  trees: LegacyTree[]
+}
+
 export interface DynastyInfo {
   id: number
   name: string
@@ -88,6 +131,7 @@ export interface DynastyInfo {
   renown: number
   members: number
   alive_members: number
+  legacies: Record<string, number>
 }
 
 export interface PopulationInfo {
@@ -127,6 +171,8 @@ export interface Snapshot {
   dynasties: DynastyInfo[]
   events: EventInfo[]
   naming_queue: NamingEntry[]
+  tutoring_queue: TutoringEntry[]
+  legacies: LegacyInfo
   population: PopulationInfo
   heir: CharacterInfo | null
   stats: StatsInfo
@@ -148,4 +194,6 @@ export interface ApiResponse {
   exists?: boolean
   saves?: SaveInfo[]
   candidates?: CharacterInfo[]
+  own?: CharacterInfo[]
+  other?: CharacterInfo[]
 }

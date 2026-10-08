@@ -25,6 +25,8 @@ class World:
     # 结构化事件流（WebUI 消费）：{year, month, xun, type, text, actors}
     events: list[dict] = field(default_factory=list)
     naming_queue: list[dict] = field(default_factory=list)
+    tutoring_queue: list[dict] = field(default_factory=list)  # 待定教养的玩家血亲儿童
+    betrothals: list[dict] = field(default_factory=list)  # [{a, b, patrilineal}]
     over: bool = False
     over_reason: str = ""
     gender_law: str = "male_preference"  # male_preference / equal / female_preference

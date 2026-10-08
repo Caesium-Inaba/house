@@ -106,6 +106,27 @@ export const IconHourglass = () => (
   </svg>
 )
 
+export const IconBrush = () => (
+  <svg {...S}>
+    <path d="M20 4c-3 0-8 2.5-11 5.5L12 13C15 10 17.5 7 20 4z" />
+    <path d="M9 9.5L4.5 14c-1.5 1.5-2 5.5-2 5.5s4-.5 5.5-2L12.5 13" />
+  </svg>
+)
+
+export const IconHandshake = () => (
+  <svg {...S}>
+    <path d="M4 8l4-2 4 2 4-2 4 2v6c-1.5 2.5-3 4.5-4 5.5-.8.8-2 .8-2.8 0" />
+    <path d="M12 8l-3.5 3.5a1.8 1.8 0 0 0 2.6 2.6L14 11.2" />
+  </svg>
+)
+
+export const IconSigil = () => (
+  <svg {...S}>
+    <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" />
+    <path d="M8 12l3 3 5-6" />
+  </svg>
+)
+
 export const EVENT_ICONS: Record<string, () => JSX.Element> = {
   pregnancy: IconHeart,
   birth: IconCradle,
@@ -114,6 +135,9 @@ export const EVENT_ICONS: Record<string, () => JSX.Element> = {
   succession: IconCrown,
   extinction: IconFallenCrown,
   adulthood: IconSprout,
+  tutoring: IconBrush,
+  betrothal: IconHandshake,
+  legacy: IconSigil,
   chronicle: IconScroll,
 }
 
@@ -125,6 +149,9 @@ export const EVENT_COLORS: Record<string, string> = {
   succession: 'var(--gold)',
   extinction: 'var(--wax)',
   adulthood: 'var(--steel)',
+  tutoring: '#d0b46a',
+  betrothal: '#b48ad0',
+  legacy: 'var(--gold)',
   chronicle: 'var(--ink-faint)',
 }
 
@@ -136,5 +163,8 @@ export const EVENT_LABELS: Record<string, string> = {
   succession: '继承',
   extinction: '绝嗣',
   adulthood: '成年',
+  tutoring: '开蒙',
+  betrothal: '婚约',
+  legacy: '传承',
   chronicle: '记事',
 }

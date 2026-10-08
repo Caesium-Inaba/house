@@ -38,4 +38,10 @@ export const api = {
   delSave: (name: string): Promise<ApiResponse> =>
     fetch(`/api/saves/${encodeURIComponent(name)}`, { method: 'DELETE' }).then(jf),
   newGame: (seed: number | null): Promise<ApiResponse> => post('/api/new', { seed }),
+  tutoring: (child_id: number, focus: string, guardian_id: number | null): Promise<ApiResponse> =>
+    post('/api/tutoring', { child_id, focus, guardian_id }),
+  betrothalPools: (): Promise<ApiResponse> => fetch('/api/betrothal/pools').then(jf),
+  betrothal: (a_id: number, b_id: number, patrilineal: boolean): Promise<ApiResponse> =>
+    post('/api/betrothal', { a_id, b_id, patrilineal }),
+  legacyBuy: (tree: string): Promise<ApiResponse> => post('/api/legacy', { tree }),
 }

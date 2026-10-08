@@ -106,6 +106,61 @@ def main() -> None:
     assert res["ok"] and res["state"]["date"]["year"] == 1066
     print("[new] OK")
 
+    # ── 王朝传承：威名不足应被拒绝 ──
+    r = client.post("/api/legacy", json={"tree": "blood"})
+    res = r.json()
+    assert not res["ok"] and "威名" in res["message"], res
+    assert res["state"]["legacies"]["trees"][0]["cost"] == 500
+    print("[legacy reject] OK ", res["message"])
+
+    # ── 教养礼：推年直到 6 岁孩子进入队列，指派开蒙 ──
+    for _ in range(12):
+        snap = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+        if snap["over"] or snap["tutoring_queue"]:
+            break
+    if snap["tutoring_queue"]:
+        entry = snap["tutoring_queue"][0]
+        guardians = entry["guardian_candidates"]
+        gid = guardians[0]["id"] if guardians else None
+        r = client.post(
+            "/api/tutoring",
+            json={"child_id": entry["child_id"], "focus": entry["suggested_focus"], "guardian_id": gid},
+        )
+        res = r.json()
+        assert res["ok"], res
+        assert next(
+            (e for e in res["state"]["tutoring_queue"] if e["child_id"] == entry["child_id"]), None
+        ) is None
+        child = next(c for c in res["state"]["characters"] if c["id"] == entry["child_id"])
+        assert child["education_focus"] == entry["suggested_focus"] and child["guardian"] == gid
+        assert any(e["type"] == "tutoring" for e in res["state"]["events"])
+        print("[tutoring] OK", res["message"])
+    else:
+        print("[tutoring] SKIP  12 年内无玩家血亲满 6 岁")
+
+    # ── 婚约：订婚池 + 缔结 + 人物快照反映 ──
+    snap = client.get("/api/state").json()
+    r = client.get("/api/betrothal/pools")
+    pools = r.json()
+    own, other = pools["own"], pools["other"]
+    print("[pools] OK  自家", len(own), "他人", len(other))
+    if own and other:
+        a, b = own[0], other[0]
+        r = client.post("/api/betrothal", json={"a_id": a["id"], "b_id": b["id"], "patrilineal": False})
+        res = r.json()
+        assert res["ok"], res["message"]
+        char = next(c for c in res["state"]["characters"] if c["id"] == a["id"])
+        assert char["betrothed"]["name"] == b["name"]
+        assert any(e["type"] == "betrothal" for e in res["state"]["events"])
+        # 同对象再订应被拒绝
+        other2 = [x for x in other if x["id"] != b["id"]]
+        if other2:
+            r = client.post("/api/betrothal", json={"a_id": a["id"], "b_id": other2[0]["id"]})
+            assert not r.json()["ok"]
+        print("[betrothal] OK", b["name"], "母系")
+    else:
+        print("[betrothal] SKIP  无可订孩子")
+
     print("\nWebUI 冒烟测试全部通过 ✓")
 
 

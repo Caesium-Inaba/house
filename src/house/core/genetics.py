@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .. import balance as B
+from . import legacy
 from . import traits as T
 from .models import Character
 from .world import World
@@ -165,13 +166,16 @@ def create_child(
         genes=genes,
         traits=random_personality(world),
     )
-    # 新生儿属性 = 潜力的一小部分 + 先天加成
+    # 新生儿属性 = 潜力的一小部分 + 先天加成 + 性格加成（CK3 采录值）
+    cong = T.congenital_attr_bonus(genes)
+    pers = T.personality_attrs(child.traits)
     for key in B.ATTR_KEYS:
-        child.attributes[key] = max(0, round(potential[key] * 0.15) + cong_attr.get(key, 0))
+        child.attributes[key] = max(0, round(potential[key] * 0.15) + cong.get(key, 0) + pers.get(key, 0))
 
     from .health import birth_health  # 延迟导入避免循环
 
-    child.health = birth_health(world, gender) + T.congenital_health_bonus(genes)
+    fm = legacy.family_modifiers(world, child.dynasty)
+    child.health = birth_health(world, gender) + T.congenital_health_bonus(genes) + fm.get("health_add", 0.0)
 
     world.add_character(child)
     if father is not None:
@@ -184,7 +188,7 @@ def create_child(
 
 
 def grow_children(world: World) -> None:
-    """每年推进一次：儿童属性向潜力成长，16 岁授予教育特质。"""
+    """每年推进一次：童年特质显现、教育判定（CK3）、属性向潜力成长、16 岁定性。"""
     for child in world.alive():
         age = child.age
         if age >= B.CHILDHOOD_END:
@@ -193,6 +197,21 @@ def grow_children(world: World) -> None:
             continue
         if age < B.CHILDHOOD_START:
             continue
+        # ── 6 岁生日：童年特质显现 + 进入教养队列 ──
+        if child.childhood_trait is None:
+            T.roll_childhood_trait(world, child)
+            child.education_focus = T.childhood_focus(child.childhood_trait)  # CK3 默认推定
+            if world.is_descendant(child.id, world.player_id):
+                world.tutoring_queue.append({"child_id": child.id})
+            else:
+                auto_tutor(world, child)
+        elif child.education_focus is None:
+            child.education_focus = T.childhood_focus(child.childhood_trait)
+        # ── 年度教育判定（CK3 生日 roll：成功 +2 分） ──
+        if child.education_focus is not None and child.education is None:
+            if world.rng.random() < _edu_success_chance(world, child):
+                child.education_score += B.EDU_SCORE_PER_SUCCESS
+        # ── 属性向潜力成长（原有成长曲线保留） ──
         cong = T.congenital_attr_bonus(child.genes)
         progress = (age - B.CHILDHOOD_START + 1) / (B.CHILDHOOD_END - B.CHILDHOOD_START)
         for key in B.ATTR_KEYS:
@@ -202,22 +221,97 @@ def grow_children(world: World) -> None:
             child.attributes[key] = cur + max(1, round((target - cur) * 0.34))
 
 
+def _child_edu_success_factor(world: World, child: Character) -> int:
+    factor = 0
+    for tid, state in child.genes.items():
+        if state == 2 and T.congenital_group(tid) == "intellect":
+            factor += B.EDU_CHILD_INTELLECT_FACTOR.get(str(T.congenital_level(tid)), 0)
+    if child.childhood_trait is not None and child.education_focus is not None:
+        factor += (
+            B.EDU_CHILDHOOD_MATCH
+            if T.childhood_focus(child.childhood_trait) == child.education_focus
+            else -B.EDU_CHILDHOOD_MATCH
+        )
+    return factor
+
+
+def _guardian_edu_factors(world: World, child: Character) -> tuple[int, int]:
+    """(成功因子, 失败因子) 中监护人部分。"""
+    guardian = world.get(child.guardian)
+    if guardian is None or not guardian.is_alive:
+        return 0, B.EDU_NO_GUARDIAN_FAIL
+    success, failure = 0, 0
+    for tid, state in guardian.genes.items():
+        if state == 2 and T.congenital_group(tid) == "intellect":
+            lvl = T.congenital_level(tid)
+            if lvl > 0:
+                success += B.EDU_GUARDIAN_INTELLECT_FACTOR.get(str(lvl), 0)
+    if guardian.attributes:
+        success += int(round(B.EDU_GUARDIAN_SKILL_WEIGHT * guardian.attributes.get(child.education_focus, 0)))
+        success += int(round(B.EDU_GUARDIAN_LEARNING_WEIGHT * guardian.attributes.get("learning", 0)))
+    return success, failure
+
+
+def _child_edu_failure_factor(world: World, child: Character) -> int:
+    factor = 0
+    for tid, state in child.genes.items():
+        if state == 2 and T.congenital_group(tid) == "intellect":
+            lvl = T.congenital_level(tid)
+            if lvl < 0:
+                factor += B.EDU_CHILD_INTELLECT_FACTOR.get(str(lvl), 0)
+        if state == 2 and tid == "inbred":
+            factor += T.TRAITS.get("inbred", {}).get("edu_penalty", 20)
+    return factor
+
+
+def _edu_success_chance(world: World, child: Character) -> float:
+    """CK3 教育判定：成功率 = (60 + 成功因子) / (100 + 成功因子 + 失败因子)。"""
+    child_factor = _child_edu_success_factor(world, child)
+    guardian_success, guardian_failure = _guardian_edu_factors(world, child)
+    success_factor = child_factor + guardian_success
+    failure_factor = _child_edu_failure_factor(world, child) + guardian_failure
+    p = (B.EDU_SUCCESS_FACTOR_BASE + success_factor) / (
+        B.EDU_SCORE_DIVISOR_BASE + success_factor + failure_factor
+    )
+    return max(0.0, min(1.0, p))
+
+
+def auto_tutor(world: World, child: Character) -> None:
+    """AI 家族孩子的自动教养：焦点=童年特质推定，监护人=同族最高相关技能成人。"""
+    if child.education_focus is None and child.childhood_trait is not None:
+        child.education_focus = T.childhood_focus(child.childhood_trait)
+    if child.guardian is None:
+        dyn = child.dynasty
+        focus = child.education_focus or "diplomacy"
+        best, best_val = None, -1
+        for c in world.alive():
+            if c.id == child.id or c.dynasty != dyn or not c.is_adult:
+                continue
+            val = c.attributes.get(focus, 0) + c.attributes.get("learning", 0)
+            if val > best_val:
+                best, best_val = c, val
+        if best is not None:
+            child.guardian = best.id
+
+
 def finalize_education(world: World, child: Character) -> None:
-    best = max(B.ATTR_KEYS[:-1], key=lambda k: child.potential.get(k, 0))  # 不含勇武
-    top = max(child.potential.get(k, 0) for k in B.ATTR_KEYS[:-1])
-    if top >= 16:
-        level = 4
-    elif top >= 12:
-        level = 3
-    elif top >= 9:
-        level = 2
-    else:
-        level = 1
-    child.education = f"edu_{best}_{level}"
+    score = child.education_score
+    level = 1
+    for threshold, lv in B.EDU_SCORE_TIERS:  # [(18,4),(13,3),(8,2),(0,1)]
+        if score >= threshold:
+            level = lv
+            break
+    route = child.education_focus or max(
+        B.ATTR_KEYS[:-1], key=lambda k: child.potential.get(k, 0)
+    )  # 兜底：按潜力选择（不含勇武）
+    child.education = f"edu_{route}_{level}"
+    world.tutoring_queue = [e for e in world.tutoring_queue if e.get("child_id") != child.id]
     cong = T.congenital_attr_bonus(child.genes)
     edu = T.education_attr_bonus(child.education)
+    pers = T.personality_attrs(child.traits)
     for key in B.ATTR_KEYS:
-        val = child.potential[key] + cong.get(key, 0) + edu.get(key, 0)
+        val = child.potential[key] + cong.get(key, 0) + edu.get(key, 0) + pers.get(key, 0)
         child.attributes[key] = max(B.ATTR_MIN, min(B.ATTR_MAX, val))
-    world.add_log(f"{child.name} 成年了（{T.education_name(child.education)}）。")
+    world.add_log(f"{child.name} 成年了（{T.education_name(child.education)}，得 {score} 分）。")
     world.add_event("adulthood", f"{child.name} 成年了（{T.education_name(child.education)}）。", [child.id])
+

@@ -3,9 +3,9 @@
 import { useMemo, useState, type JSX } from 'react'
 import { useStore } from '../store'
 import type { EventInfo } from '../types'
-import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle } from '../icons'
+import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle, IconBrush } from '../icons'
 
-const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'adulthood', 'death', 'succession', 'extinction', 'chronicle'] as const
+const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'betrothal', 'adulthood', 'tutoring', 'death', 'succession', 'legacy', 'extinction', 'chronicle'] as const
 
 function dayLabel(e: EventInfo): string {
   if (e.year == null) return '先前的岁月'
@@ -93,6 +93,23 @@ export default function Chronicle() {
             待命名 · {snap.naming_queue[0].suggested}（{snap.naming_queue[0].relation}）
             {snap.naming_queue.length > 1 ? ` · 另有 ${snap.naming_queue.length - 1} 位` : ''}
             {' —— 点击举行命名礼'}
+          </div>
+        </div>
+      )}
+
+      {snap.tutoring_queue.length > 0 && (
+        <div
+          className="event pending"
+          style={{ margin: '8px 16px 0', width: 'calc(100% - 32px)' }}
+          onClick={() => openModal('tutoring')}
+        >
+          <div className="icon" style={{ color: '#d0b46a' }}>
+            <IconBrush />
+          </div>
+          <div className="text" style={{ color: '#e0d3a0' }}>
+            待开蒙 · {snap.tutoring_queue[0].name}（{snap.tutoring_queue[0].relation ?? ''}）
+            {snap.tutoring_queue.length > 1 ? ` · 另有 ${snap.tutoring_queue.length - 1} 位` : ''}
+            {' —— 点击举行教养礼'}
           </div>
         </div>
       )}

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from .. import balance as B
-from . import fertility, genetics, health, inheritance, marriage, opinion
+from . import fertility, genetics, health, inheritance, legacy, marriage, opinion
+from . import traits as T
 from .world import World
 
 
@@ -35,6 +36,7 @@ def advance(world: World, xuns: int, stop_on_naming: bool = False) -> None:
 
 def monthly_settlement(world: World) -> None:
     fertility.monthly_settlement(world)
+    marriage.fulfill_betrothals(world)
     marriage.ai_marriages(world)
     opinion.monthly_decay(world)
 
@@ -48,10 +50,20 @@ def yearly_settlement(world: World) -> None:
 
 def _yearly_resources(world: World) -> None:
     for char in world.alive():
+        fm = legacy.family_modifiers(world, char.dynasty)
+        im = T.income_mods(char.traits)
         if char.dynasty is not None and char.dynasty in world.dynasties:
             world.dynasties[char.dynasty].renown += B.RENOWN_YEARLY_BASE * 0.1
-    player = world.player
-    if player is not None and player.is_alive:
-        player.prestige += B.PRESTIGE_YEARLY_BASE + player.attr("diplomacy") * 0.2
-        player.piety += B.PIETY_YEARLY_BASE
-        player.money += B.MONEY_YEARLY_BASE + player.attr("stewardship") * 0.3
+        player = world.player
+        if char.id == (player.id if player else -1) and player is not None and player.is_alive:
+            prestige = B.PRESTIGE_YEARLY_BASE + player.attr("diplomacy") * 0.2
+            prestige += im["prestige_flat_yearly"]
+            prestige *= (1 + im["prestige_pct"]) * (1 + fm.get("prestige_mult", 0.0))
+            player.prestige += prestige
+            piety = B.PIETY_YEARLY_BASE
+            piety += im["piety_flat_yearly"]
+            piety *= (1 + im["piety_pct"])
+            player.piety += max(0.0, piety)
+            money = B.MONEY_YEARLY_BASE + player.attr("stewardship") * 0.3
+            money *= (1 + im["money_pct"]) * (1 + fm.get("money_mult", 0.0))
+            player.money += max(0.0, money)

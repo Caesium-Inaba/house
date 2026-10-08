@@ -1,7 +1,8 @@
 /* 右栏：家族仪表盘 —— 继承 / 眷属 / 人口 / 待命名 / 纹章墙 / 成员名录 */
 
 import { useMemo, useState } from 'react'
-import { useStore } from '../store'
+import { useStore, runAction } from '../store'
+import { api } from '../api/client'
 import type { CharacterInfo } from '../types'
 import { Sigil, Crest } from '../heraldry'
 
@@ -82,6 +83,61 @@ export default function DynastyPanel() {
                 </span>
                 <button className="btn primary" style={{ padding: '3px 10px', fontSize: 12 }}>
                   命名礼
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* 王朝传承 */}
+        <div className="divider-label">王朝传承 · 威名 <b style={{ color: 'var(--gold)' }}>{snap.legacies.renown}</b></div>
+        {snap.legacies.trees.map((t) => (
+          <div key={t.id} className="save-slot" style={{ padding: '8px 12px' }}>
+            <span className="s-name" style={{ fontSize: 13 }}>
+              {t.label}
+              <span style={{ color: 'var(--ink-faint)', fontSize: 11, marginLeft: 6 }}>{t.desc}</span>
+            </span>
+            <span style={{ letterSpacing: 2, color: t.level === 0 ? 'var(--ink-faint)' : 'var(--gold)' }}>
+              {'◆'.repeat(t.level)}{'◇'.repeat(t.max - t.level)}
+            </span>
+            {t.cost != null ? (
+              <button
+                className={`btn ${t.affordable ? 'primary' : ''}`}
+                style={{ padding: '3px 10px', fontSize: 11.5 }}
+                disabled={!t.affordable}
+                title={`解锁 ${t.label} 第 ${t.level + 1} 级（${t.cost} 威名）`}
+                onClick={() => void runAction(() => api.legacyBuy(t.id))}
+              >
+                {t.cost}
+              </button>
+            ) : (
+              <span style={{ color: 'var(--gold-dim)', fontSize: 11 }}>★ 满</span>
+            )}
+          </div>
+        ))}
+
+        {/* 待教养 */}
+        {snap.tutoring_queue.length > 0 && (
+          <>
+            <div className="divider-label" style={{ color: '#d0b46a' }}>
+              待开蒙 · {snap.tutoring_queue.length}
+            </div>
+            {snap.tutoring_queue.map((n) => (
+              <div
+                key={n.child_id}
+                className="save-slot"
+                style={{ cursor: 'pointer' }}
+                onClick={() => openModal('tutoring')}
+              >
+                <Sigil name={n.name} gender={n.gender} did={undefined} size={30} />
+                <span className="s-name">
+                  {n.name}
+                  <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>
+                    {' · '}{n.age}岁{n.childhood_trait ? ` · ${n.childhood_trait.name}` : ''}
+                  </span>
+                </span>
+                <button className="btn primary" style={{ padding: '3px 10px', fontSize: 12 }}>
+                  教养礼
                 </button>
               </div>
             ))}

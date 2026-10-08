@@ -1,11 +1,14 @@
-"""好感度（Opinion）：-100..100，随时间向 0 衰减。"""
+"""好感度（Opinion）：-100..100。
+
+CK3 无全局月度衰减；好感是持久的 modifier，由事件与关系产生。
+"""
 
 from __future__ import annotations
 
 from .models import Character
 from .world import World
 
-MONTHLY_DECAY_STEP = 0.5
+MONTHLY_DECAY_STEP = 0.0  # CK3 无衰减；保留开关便于试玩调校
 
 
 def set_opinion(char: Character, other_id: int, value: int) -> None:

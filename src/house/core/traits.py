@@ -26,12 +26,17 @@ def _build_traits() -> dict[str, dict]:
         for level_str, display in spec["levels"].items():
             level = int(level_str)
             tid = f"{group}_{'n' if level < 0 else 'p'}{abs(level)}"
+            # 每级显式表（CK3 不等差）优先，否则线性
+            if "levels_attrs" in spec and level_str in spec["levels_attrs"]:
+                attrs = dict(spec["levels_attrs"][level_str])
+            else:
+                attrs = {a: level * spec.get("per_level_attrs", 1) for a in spec.get("attrs", [])}
             db[tid] = {
                 "name": display,
                 "type": "congenital",
                 "group": group,
                 "level": level,
-                "attrs": {a: level * spec.get("per_level_attrs", 1) for a in spec["attrs"]},
+                "attrs": attrs,
                 "health": level * spec.get("per_level_health", 0.0),
                 "prowess": level * spec.get("per_level_prowess", 0),
             }
@@ -43,6 +48,8 @@ _trait_data = load_json("traits.json")
 CONGENITAL_GROUPS: dict[str, dict] = _trait_data.get("congenital_groups", {})
 PERSONALITY: dict[str, dict] = _trait_data.get("personality", {})
 EDUCATION: dict[str, Any] = _trait_data.get("education", {})
+CHILDHOOD: dict[str, dict] = _trait_data.get("childhood", {})
+PERSONALITY_IDS: list[str] = list(PERSONALITY)
 
 
 def trait_def(tid: str) -> dict:
@@ -121,6 +128,53 @@ def trait_fertility_modifier(traits: set[str]) -> float:
     return sum(TRAITS.get(t, {}).get("fertility", 0.0) for t in traits)
 
 
+def personality_attrs(traits: set[str]) -> dict[str, int]:
+    """性格特质的属性修正（CK3：勇敢 +2 军事 等）。"""
+    bonus = {k: 0 for k in ("diplomacy", "martial", "stewardship", "intrigue", "learning", "prowess")}
+    for tid in traits:
+        d = TRAITS.get(tid, {})
+        for a, v in d.get("attrs", {}).items():
+            if a in bonus:
+                bonus[a] += v
+        p = d.get("prowess")
+        if isinstance(p, (int, float)):
+            bonus["prowess"] += int(p)
+    return bonus
+
+
+def income_mods(traits: set[str]) -> dict[str, float]:
+    """性格特质的收入修正（按人物逐个应用；月值×12 转为年值）。"""
+    mods = {
+        "money_pct": 0.0,
+        "prestige_pct": 0.0,
+        "piety_pct": 0.0,
+        "prestige_flat_yearly": 0.0,
+        "piety_flat_yearly": 0.0,
+    }
+    for tid in traits:
+        d = TRAITS.get(tid, {})
+        mods["money_pct"] += d.get("money_pct", 0.0)
+        mods["prestige_pct"] += d.get("prestige_pct", 0.0)
+        mods["piety_pct"] += d.get("piety_pct", 0.0)
+        mods["prestige_flat_yearly"] += d.get("prestige_monthly", 0.0) * 12.0
+        mods["piety_flat_yearly"] += d.get("piety_monthly", 0.0) * 12.0
+    return mods
+
+
+def opinion_delta(a_traits: set[str], b_traits: set[str]) -> int:
+    """CK3 性格 → 性格好感：同特质 +10，异特质 −10（个别 −15）。取双方对称和的一半。"""
+    delta = 0
+    for ta in a_traits:
+        da = PERSONALITY.get(ta, {})
+        opp = set(da.get("opposites", []))
+        for tb in b_traits:
+            if tb == ta:
+                delta += 10
+            elif tb in opp:
+                delta += da.get("opp_opinion", -10)
+    return delta // 2
+
+
 def education_attr_bonus(education: str | None) -> dict[str, int]:
     """教育特质 id 形如 edu_martial_3。"""
     bonus = {k: 0 for k in ("diplomacy", "martial", "stewardship", "intrigue", "learning", "prowess")}
@@ -144,3 +198,22 @@ def education_name(education: str | None) -> str:
     _, route, level = parts
     route_name = EDUCATION.get("routes", {}).get(route, route)
     return f"{route_name}{level}级"
+
+
+# ── 童年特质（CK3：6 岁显现，隐含推定教育方向） ──
+
+CHILDHOOD_IDS: list[str] = [k for k in CHILDHOOD if not k.startswith("_")]
+
+
+def childhood_name(tid: str) -> str:
+    return CHILDHOOD.get(tid, {}).get("name", tid)
+
+
+def childhood_focus(tid: str) -> str:
+    return CHILDHOOD.get(tid, {}).get("focus", "diplomacy")
+
+
+def roll_childhood_trait(world: World, child) -> None:
+    """为满 6 岁的孩子抽取童年特质。"""
+    if child.childhood_trait is None:
+        child.childhood_trait = world.rng.choice(CHILDHOOD_IDS)
