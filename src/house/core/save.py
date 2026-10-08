@@ -11,8 +11,40 @@ from .models import Character, Dynasty
 from .time import Date
 from .world import World
 
-SAVE_VERSION = 1
+SAVE_VERSION = 2
 SAVE_DIR = Path("saves")
+
+# 旧档 log 的 emoji 前缀 -> 事件类型
+_LEGACY_EMOJI = {
+    "♡": "pregnancy",
+    "👶": "birth",
+    "⚭": "marriage",
+    "⚰": "death",
+    "👑": "succession",
+    "☠": "extinction",
+}
+
+
+def _events_from_log(log: list[str]) -> list[dict]:
+    """v1 存档无结构化事件，从字符串日志的 emoji 前缀合成（无日期）。"""
+    events: list[dict] = []
+    for msg in log:
+        etype = "chronicle"
+        text = msg
+        for emoji, t in _LEGACY_EMOJI.items():
+            if msg.startswith(emoji):
+                etype = t
+                text = msg[len(emoji):].strip()
+                break
+        else:
+            if "成年了（" in msg:
+                etype = "adulthood"
+            elif "成为" in msg and "家主" in msg:
+                etype = "succession"
+        events.append(
+            {"year": None, "month": None, "xun": None, "type": etype, "text": text, "actors": []}
+        )
+    return events
 
 
 def _rng_state_to_json(state) -> list:
@@ -39,6 +71,7 @@ def world_to_dict(world: World) -> dict:
         "characters": [c.to_dict() for c in world.characters.values()],
         "dynasties": [d.to_dict() for d in world.dynasties.values()],
         "log": list(world.log),
+        "events": [dict(e) for e in world.events],
         "naming_queue": [dict(e) for e in world.naming_queue],
     }
 
@@ -60,6 +93,10 @@ def world_from_dict(data: dict) -> World:
         dyn = Dynasty.from_dict(ddata)
         world.dynasties[dyn.id] = dyn
     world.log = list(data.get("log", []))
+    legacy_events = data.get("events")
+    world.events = (
+        [dict(e) for e in legacy_events] if legacy_events is not None else _events_from_log(world.log)
+    )
     world.naming_queue = [dict(e) for e in data.get("naming_queue", [])]
     world.refresh_ages()
     return world

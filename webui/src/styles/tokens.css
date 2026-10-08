@@ -1,0 +1,49 @@
+/* ═══════════════════════════════════════════════════════════
+   烛光宫廷 · 设计 tokens
+   深夜书房：暗棕黑底、烛光金、封蜡红、羊皮字、衬线字系
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 底色 ── */
+  --bg-0: #120e0a;            /* 最深底 */
+  --bg-1: #1a1510;            /* 页面 */
+  --panel: #201a12;           /* 面板 */
+  --panel-2: #261f16;         /* 面板上的卡片 */
+  --inset: #171310;           /* 内嵌输入/列表 */
+  --edge: #3a3020;            /* 发丝线 */
+  --edge-strong: #57492c;     /* 强调线 */
+
+  /* ── 烛光金系 ── */
+  --gold: #c9a961;
+  --gold-bright: #e8cf8a;
+  --gold-dim: #8a744a;
+  --gold-faint: rgba(201, 169, 97, 0.14);
+
+  /* ── 羊皮字系 ── */
+  --ink: #e9dec4;
+  --ink-dim: #a89878;
+  --ink-faint: #6f6350;
+
+  /* ── 语义色 ── */
+  --wax: #b23c34;             /* 封蜡红：死亡 / 危险 */
+  --wax-deep: #7e2a24;
+  --verdant: #7ba05b;         /* 草木绿：正面 / 怀孕 */
+  --steel: #7fa3c7;           /* 钢青：信息 / 男性 */
+  --plum: #b088a8;            /* 紫菀：女性 */
+
+  /* ── 字体 ── */
+  --serif: 'Noto Serif SC', 'Source Han Serif SC', 'STZhongsong', SimSun,
+    Georgia, serif;
+  --font-body: var(--serif);
+  --font-display: var(--serif);
+
+  /* ── 尺寸 ── */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --topbar-h: 58px;
+  --col-left: 356px;
+  --col-right: 344px;
+
+  /* ── 纹理 ── */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.82 0 0 0 0 0.6 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}

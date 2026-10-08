@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════
+   基础：全局排版、背景氛围、滚动条
+   ═══════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 700px at 50% -12%, rgba(201, 169, 97, 0.075), transparent 62%),
+    radial-gradient(900px 620px at 50% 118%, rgba(158, 59, 51, 0.055), transparent 60%),
+    var(--bg-0);
+  background-attachment: fixed;
+  overflow: hidden;
+  min-width: 1024px;
+}
+
+/* 噪点纹理 + 暗角，铺在最上层但不挡交互 */
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: var(--noise);
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 999;
+  mix-blend-mode: overlay;
+}
+
+::selection {
+  background: rgba(201, 169, 97, 0.35);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+}
+
+a {
+  color: var(--steel);
+}
+
+/* ── 滚动条：细烛芯 ── */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--edge-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-dim);
+  background-clip: content-box;
+}
+
+/* ── 输入框 ── */
+input[type='text'],
+input[type='search'],
+input[type='number'] {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type='text']:focus,
+input[type='search']:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.12);
+}
+
+input::placeholder {
+  color: var(--ink-faint);
+}

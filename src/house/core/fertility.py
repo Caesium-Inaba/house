@@ -86,6 +86,7 @@ def monthly_settlement(world: World) -> None:
             mother.pregnancy_father = father.id
             dyn = world.dynasty_name_of(father.id)
             world.add_log(f"♡ {mother.name} 有了身孕（{dyn}）。")
+            world.add_event("pregnancy", f"{mother.name} 有了身孕（{dyn}）。", [mother.id, father.id])
 
 
 def childbirth(world: World, mother: Character) -> None:
@@ -101,6 +102,11 @@ def childbirth(world: World, mother: Character) -> None:
 
     names = "、".join(k.name for k in kids)
     world.add_log(f"👶 {mother.name} 诞下 {names}。")
+    world.add_event(
+        "birth",
+        f"{mother.name} 诞下 {names}。",
+        [mother.id] + [k.id for k in kids],
+    )
 
     for k in kids:
         if world.is_descendant(k.id, world.player_id):

@@ -35,6 +35,7 @@ def kill(world: World, char: Character, reason: str) -> None:
     char.death_year = world.date.year
     char.death_reason = reason
     world.add_log(f"⚰ {char.name}（{char.age}岁）去世：{reason}。")
+    world.add_event("death", f"{char.name}（{char.age}岁）去世：{reason}。", [char.id])
 
 
 def yearly_health(world: World) -> None:

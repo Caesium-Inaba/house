@@ -50,6 +50,7 @@ def arrange_marriage(
     opinion.add_opinion(a, b.id, 30)
     opinion.add_opinion(b, a.id, 30)
     world.add_log(f"⚭ {a.name} 与 {b.name} 缔结姻缘。")
+    world.add_event("marriage", f"{a.name} 与 {b.name} 缔结姻缘。", [a.id, b.id])
     return True
 
 

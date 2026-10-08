@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Sequence
 
 from .models import Character, Dynasty
 from .time import Date
+
+EVENT_CAP = 400
 
 
 @dataclass
@@ -20,6 +22,8 @@ class World:
     next_dynasty_id: int = 1
     rng: random.Random = field(default_factory=random.Random)
     log: list[str] = field(default_factory=list)
+    # 结构化事件流（WebUI 消费）：{year, month, xun, type, text, actors}
+    events: list[dict] = field(default_factory=list)
     naming_queue: list[dict] = field(default_factory=list)
     over: bool = False
     over_reason: str = ""
@@ -66,6 +70,21 @@ class World:
         self.log.append(msg)
         if len(self.log) > 400:
             del self.log[: len(self.log) - 400]
+
+    def add_event(self, etype: str, text: str, actors: Sequence[int] = ()) -> None:
+        """结构化事件（与 add_log 成对出现；text 不含 emoji / 日期前缀）。"""
+        self.events.append(
+            {
+                "year": self.date.year,
+                "month": self.date.month,
+                "xun": self.date.xun,
+                "type": etype,
+                "text": text,
+                "actors": list(actors),
+            }
+        )
+        if len(self.events) > EVENT_CAP:
+            del self.events[: len(self.events) - EVENT_CAP]
 
     def name_of(self, cid: Optional[int]) -> str:
         ch = self.get(cid)

@@ -220,3 +220,4 @@ def finalize_education(world: World, child: Character) -> None:
         val = child.potential[key] + cong.get(key, 0) + edu.get(key, 0)
         child.attributes[key] = max(B.ATTR_MIN, min(B.ATTR_MAX, val))
     world.add_log(f"{child.name} 成年了（{T.education_name(child.education)}）。")
+    world.add_event("adulthood", f"{child.name} 成年了（{T.education_name(child.education)}）。", [child.id])
