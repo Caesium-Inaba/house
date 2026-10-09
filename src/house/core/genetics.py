@@ -2,18 +2,27 @@
 
 from __future__ import annotations
 
+import random
 from typing import Optional
 
 from .. import balance as B
+from .. import i18n
 from . import legacy
 from . import traits as T
 from .models import Character
 from .world import World
 
 
-def pick_name(world: World, culture: str, gender: str) -> str:
+def pick_name(world: World, culture: str, gender: str, *, exclude: set[str] | None = None) -> str:
+    """从文化名字池抽取；exclude 提供的已用名（同宗同名序将追加罗马数字）。
+
+    去重规则：推荐名避开同父/同母手足；手动输入不受约束（同名走「二世」）。
+    """
     names = T.load_json("names.json").get("cultures", {}).get(culture, {})
     pool = names.get("male" if gender == "male" else "female", [])
+    if exclude:
+        free = [n for n in pool if n not in exclude]
+        pool = free or pool  # 全被占用时回退全池（孩子将带同名序号）
     return world.rng.choice(pool) if pool else "无名"
 
 
@@ -150,13 +159,23 @@ def create_child(
 
     gender = "male" if world.rng.random() < 0.5 else "female"
 
+    # 同父/同母手足已用名 → 推荐名避开重名（同名者由世数后缀区分）
+    used: set[str] = set()
+    for pid in (father_id, mother_id):
+        parent = world.get(pid)
+        if parent is not None:
+            for cid in parent.children:
+                sib = world.get(cid)
+                if sib is not None:
+                    used.add(sib.name)
+
     genes = inherit_genes(world, father, mother)
     cong_attr = T.congenital_attr_bonus(genes)
     potential = roll_potential(world, father, mother)
 
     child = Character(
         id=world.new_char_id(),
-        name=pick_name(world, culture, gender),
+        name=pick_name(world, culture, gender, exclude=used),
         gender=gender,
         birth_year=world.date.year,
         dynasty=dynasty,
@@ -187,8 +206,12 @@ def create_child(
     return child
 
 
+TRAIT_PICK_AGES = (9, 12, 15)  # 性情抉择点位（CK3 童年多次性格事件，适配年龄）
+GUARDIAN_TRAIT_INFLUENCE = 0.6  # 候选之一跟随监护人性格的概率（适配，可调）
+
+
 def grow_children(world: World) -> None:
-    """每年推进一次：童年特质显现、教育判定（CK3）、属性向潜力成长、16 岁定性。"""
+    """每年推进一次：童年特质显现、性情抉择、教育判定（CK3）、属性成长、16 岁定型。"""
     for child in world.alive():
         age = child.age
         if age >= B.CHILDHOOD_END:
@@ -201,12 +224,21 @@ def grow_children(world: World) -> None:
         if child.childhood_trait is None:
             T.roll_childhood_trait(world, child)
             child.education_focus = T.childhood_focus(child.childhood_trait)  # CK3 默认推定
+            params = {"child": child.name, "trait": T.childhood_name(child.childhood_trait)}
+            world.add_log(f"🧒 {i18n.t('event.childhood_trait', **params)}")
+            world.add_event("trait", "event.childhood_trait", params, [child.id])
             if world.is_descendant(child.id, world.player_id):
                 world.tutoring_queue.append({"child_id": child.id})
             else:
                 auto_tutor(world, child)
         elif child.education_focus is None:
             child.education_focus = T.childhood_focus(child.childhood_trait)
+        # ── 9/12/15 岁：性情抉择（CK3 童年多次性格事件，适配点位） ──
+        if age in TRAIT_PICK_AGES and not any(e.get("child_id") == child.id for e in world.trait_queue):
+            if world.is_descendant(child.id, world.player_id):
+                world.trait_queue.append({"child_id": child.id, "age": age})
+            else:
+                _auto_trait_pick(world, child)
         # ── 年度教育判定（CK3 生日 roll：成功 +2 分） ──
         if child.education_focus is not None and child.education is None:
             if world.rng.random() < _edu_success_chance(world, child):
@@ -219,6 +251,59 @@ def grow_children(world: World) -> None:
             target = round(goal * (0.3 + 0.7 * progress))
             cur = child.attributes[key]
             child.attributes[key] = cur + max(1, round((target - cur) * 0.34))
+
+
+def trait_pick_options(
+    world: World, child: Character, rng: Optional[random.Random] = None
+) -> tuple[str, str]:
+    """性情抉择的两个候选特质 id：(师长言传, 率性而为)。
+
+    师长言传：监护人自己的性格（监护缺位则随机）；率性而为：随机、优先与既有特质成对。
+    rng 可传入独立随机源（presenter 展示用），缺省用游戏 rng（AI 决策）。
+    """
+    roll = rng or world.rng
+    personality_ids = list(T.PERSONALITY_IDS)
+    if not personality_ids:
+        return "", ""
+    own = set(child.traits)
+
+    def _pick(pool: list[str]) -> str:
+        free = [p for p in pool if p not in own]
+        return roll.choice(free) if free else roll.choice(pool)
+
+    guardian = world.get(child.guardian)
+    if guardian is not None and guardian.traits and roll.random() < GUARDIAN_TRAIT_INFLUENCE:
+        taught = _pick(sorted(guardian.traits))
+    else:
+        taught = _pick(personality_ids)
+    # 率性而为：优先与自身既有特质相反的特质（CK3 性格成对结构）
+    opposite_pool = [
+        p for p in personality_ids
+        if any(p in T.PERSONALITY.get(o, {}).get("opposites", []) for o in own)
+    ]
+    stray = _pick(opposite_pool or personality_ids)
+    if stray == taught:
+        stray = _pick([p for p in personality_ids if p != taught])
+    return taught, stray
+
+
+def apply_trait_pick(world: World, child: Character, trait_id: str) -> None:
+    """应用性情抉择结果；改特质会给监护人/家长留下压力（API 存根）。"""
+    from . import stress
+
+    child.traits = set(child.traits) | {trait_id}
+    params = {"child": child.name, "trait": T.trait_name(trait_id)}
+    world.add_log(f"🌿 {i18n.t('event.trait_gain', **params)}")
+    world.add_event("trait", "event.trait_gain", params, [child.id])
+    # 压力钩子（未实现的状态层；落地时 Character.stress 由该入口累积）
+    stress.add_stress(world, child.guardian, 20, "stress.reason.ward_trait")
+
+
+def _auto_trait_pick(world: World, child: Character) -> None:
+    """AI 孩童的自动抉择：偏监护人侧（师长的天性）。"""
+    taught, stray = trait_pick_options(world, child)
+    apply_trait_pick(world, child, taught if world.rng.random() < 0.7 else stray)
+    world.trait_queue = [e for e in world.trait_queue if e.get("child_id") != child.id]
 
 
 def _child_edu_success_factor(world: World, child: Character) -> int:
@@ -306,12 +391,27 @@ def finalize_education(world: World, child: Character) -> None:
     )  # 兜底：按潜力选择（不含勇武）
     child.education = f"edu_{route}_{level}"
     world.tutoring_queue = [e for e in world.tutoring_queue if e.get("child_id") != child.id]
+    world.trait_queue = [e for e in world.trait_queue if e.get("child_id") != child.id]
+    # ── 童年特质成年转换（CK3：childhood → personality） ──
+    converted_note = ""
+    if child.childhood_trait:
+        adult_trait = T.childhood_conversion(child.childhood_trait)
+        if adult_trait and adult_trait in T.PERSONALITY and adult_trait not in child.traits:
+            child.traits = set(child.traits) | {adult_trait}
+            converted_note = f"，童年的「{T.childhood_name(child.childhood_trait)}」化作「{T.trait_name(adult_trait)}」"
     cong = T.congenital_attr_bonus(child.genes)
     edu = T.education_attr_bonus(child.education)
     pers = T.personality_attrs(child.traits)
     for key in B.ATTR_KEYS:
         val = child.potential[key] + cong.get(key, 0) + edu.get(key, 0) + pers.get(key, 0)
         child.attributes[key] = max(B.ATTR_MIN, min(B.ATTR_MAX, val))
-    world.add_log(f"{child.name} 成年了（{T.education_name(child.education)}，得 {score} 分）。")
-    world.add_event("adulthood", f"{child.name} 成年了（{T.education_name(child.education)}）。", [child.id])
+    world.add_log(
+        f"🌱 {i18n.t('event.adulthood', child=child.name, education=T.education_name(child.education), score=score)}"
+        f"{converted_note}"
+    )
+    world.add_event(
+        "adulthood", "event.adulthood",
+        {"child": child.name, "education": T.education_name(child.education), "score": score},
+        [child.id],
+    )
 

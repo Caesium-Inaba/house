@@ -59,7 +59,7 @@ export default function DynastyPanel() {
   return (
     <section className="panel">
       <div className="panel-head">
-        <span className="panel-title">家族</span>
+        <span className="panel-title">宗族</span>
         <span className="panel-sub">{snap.gender_law_label}</span>
       </div>
       <div className="panel-body">
@@ -90,7 +90,7 @@ export default function DynastyPanel() {
         )}
 
         {/* 王朝传承 */}
-        <div className="divider-label">王朝传承 · 威名 <b style={{ color: 'var(--gold)' }}>{snap.legacies.renown}</b></div>
+        <div className="divider-label">宗族传承 · 宗族威望 <b style={{ color: 'var(--gold)' }}>{snap.legacies.renown}</b></div>
         {snap.legacies.trees.map((t) => (
           <div key={t.id} className="save-slot" style={{ padding: '8px 12px' }}>
             <span className="s-name" style={{ fontSize: 13 }}>
@@ -144,12 +144,38 @@ export default function DynastyPanel() {
           </>
         )}
 
+        {/* 待择性 */}
+        {snap.trait_queue.length > 0 && (
+          <>
+            <div className="divider-label" style={{ color: 'var(--verdant)' }}>
+              待择性 · {snap.trait_queue.length}
+            </div>
+            {snap.trait_queue.map((n) => (
+              <div
+                key={n.child_id}
+                className="save-slot"
+                style={{ cursor: 'pointer' }}
+                onClick={() => openModal('traitpick')}
+              >
+                <Sigil name={n.name} gender={n.gender} did={undefined} size={30} />
+                <span className="s-name">
+                  {n.name}
+                  <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}> · {n.age}岁</span>
+                </span>
+                <button className="btn primary" style={{ padding: '3px 10px', fontSize: 12 }}>
+                  择天性
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
         {/* 继承 */}
         <div className="divider-label">继承</div>
         {heir ? (
           <div className="roster-item" onClick={() => select(heir.id)}>
             <Sigil name={heir.name} gender={heir.gender} alive did={heir.dynasty} size={30} />
-            <span className="r-name">{heir.name}</span>
+            <span className="r-name">{heir.display_name ?? heir.name}</span>
             <span className="r-age" style={{ color: 'var(--ink-dim)' }}>
               {heir.relation ?? ''} · {heir.age}岁
             </span>
@@ -187,7 +213,7 @@ export default function DynastyPanel() {
         </div>
 
         {/* 纹章墙 */}
-        <div className="divider-label">诸家纹章 · 威名</div>
+        <div className="divider-label">诸家纹章 · 宗族威望</div>
         {snap.dynasties.map((d) => (
           <div key={d.id} className="save-slot" style={{ padding: '8px 12px' }}>
             <Crest did={d.id} size={26} />
@@ -214,7 +240,7 @@ export default function DynastyPanel() {
           <div key={c.id} className={`roster-item ${c.alive ? '' : 'dead'}`} onClick={() => select(c.id)}>
             <Sigil name={c.name} gender={c.gender} alive={c.alive} did={c.dynasty} size={28} player={c.id === snap.player_id} />
             <span className="r-name">
-              {c.name}
+              {c.display_name ?? c.name}
               {c.relation && c.relation !== '自己' ? <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}> · {c.relation}</span> : null}
             </span>
             <span className="r-age">{c.age}岁</span>

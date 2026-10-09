@@ -16,7 +16,7 @@ export default function GameOver() {
     <div className="gameover-veil">
       <div className="epitaph">
         <div className="go-orn">✦ ─────── ✦ ─────── ✦</div>
-        <h1>{snap.over_reason || '王朝落幕'}</h1>
+        <h1>{snap.over_reason || '宗族落幕'}</h1>
         <div className="go-reason">
           {dyn?.name ?? '家族'}的历史至此合卷 —— 自 {s.start_year} 年弗拉季斯拉夫执掌家业，凡 {s.years_played} 年。
         </div>

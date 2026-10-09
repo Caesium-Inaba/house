@@ -22,7 +22,7 @@ export default function TopBar() {
 
   const player = snap.characters.find((c) => c.id === snap.player_id)
   const playerDyn = snap.dynasties.find((d) => d.id === player?.dynasty)
-  const canTick = !snap.over && snap.naming_queue.length === 0
+  const canTick = !snap.over && snap.naming_queue.length === 0 && snap.tutoring_queue.length === 0 && snap.trait_queue.length === 0
   const stats = snap.stats
 
   return (
@@ -32,9 +32,9 @@ export default function TopBar() {
         <div>
           <div className="brand-name">{playerDyn?.name ?? '—'}</div>
           <div className="brand-meta">
-            家主 <b>{player?.name ?? '—'}</b>
+            家主 <b>{player?.display_name ?? player?.name ?? '—'}</b>
             {player?.relation && player.relation !== '自己' ? '' : ''}
-            {' · '}威名 <b>{Math.round(playerDyn?.renown ?? 0)}</b>
+            {' · '}宗族威望 <b>{Math.round(playerDyn?.renown ?? 0)}</b>
             {snap.over ? ' · 大厦已倾' : ''}
           </div>
         </div>

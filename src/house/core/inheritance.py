@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from .. import i18n
 from .models import Character
 from .world import World
 
@@ -62,11 +63,13 @@ def handle_player_death(world: World) -> None:
     if heir is None:
         world.over = True
         world.over_reason = "家族绝嗣，无人继承"
-        world.add_log("☠ 家族绝嗣，故事就此终结。")
-        world.add_event("extinction", "家族绝嗣，故事就此终结。")
+        world.add_log(f"☠ {i18n.t('event.extinction')}")
+        world.add_event("extinction", "event.extinction")
         return
     world.player_id = heir.id
     if heir.dynasty is not None and heir.dynasty in world.dynasties:
         world.dynasties[heir.dynasty].head = heir.id
-    world.add_log(f"👑 {heir.name} 继承家主之位（{heir.age}岁）。")
-    world.add_event("succession", f"{heir.name} 继承家主之位（{heir.age}岁）。", [heir.id, player.id])
+    world.add_log(f"👑 {i18n.t('event.succession', heir=heir.name, age=heir.age)}")
+    world.add_event(
+        "succession", "event.succession", {"heir": heir.name, "age": heir.age}, [heir.id, player.id]
+    )

@@ -26,6 +26,7 @@ class World:
     events: list[dict] = field(default_factory=list)
     naming_queue: list[dict] = field(default_factory=list)
     tutoring_queue: list[dict] = field(default_factory=list)  # 待定教养的玩家血亲儿童
+    trait_queue: list[dict] = field(default_factory=list)  # 待「性情抉择」的玩家血亲儿童（9/12/15 岁）
     betrothals: list[dict] = field(default_factory=list)  # [{a, b, patrilineal}]
     over: bool = False
     over_reason: str = ""
@@ -73,15 +74,23 @@ class World:
         if len(self.log) > 400:
             del self.log[: len(self.log) - 400]
 
-    def add_event(self, etype: str, text: str, actors: Sequence[int] = ()) -> None:
-        """结构化事件（与 add_log 成对出现；text 不含 emoji / 日期前缀）。"""
+    def add_event(self, etype: str, key: str, params: dict | None = None, actors=()) -> None:
+        """结构化事件（与 add_log 成对出现）。
+
+        存 key + params（可重渲染多语言）与 text（发出时的中文快照，供旧展示/存档）。
+        """
+        from ..i18n import t as _t
+
+        p = dict(params or {})
         self.events.append(
             {
                 "year": self.date.year,
                 "month": self.date.month,
                 "xun": self.date.xun,
                 "type": etype,
-                "text": text,
+                "key": key,
+                "params": p,
+                "text": _t(key, **p),
                 "actors": list(actors),
             }
         )

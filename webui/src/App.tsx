@@ -9,6 +9,7 @@ import DynastyPanel from './components/DynastyPanel'
 import FamilyTree from './components/FamilyTree'
 import NamingModal from './components/modals/NamingModal'
 import TutoringModal from './components/modals/TutoringModal'
+import TraitPickModal from './components/modals/TraitPickModal'
 import MarriageModal from './components/modals/MarriageModal'
 import SaveModal from './components/modals/SaveModal'
 import NewGameModal from './components/modals/NewGameModal'
@@ -26,7 +27,7 @@ export default function App() {
 
   /* 自动推进：一旬一息；遇命名 / 终局 / 读取中暂停 */
   useEffect(() => {
-    if (!auto || busy || !snap || snap.over || snap.naming_queue.length > 0) return
+    if (!auto || busy || !snap || snap.over || snap.naming_queue.length > 0 || snap.tutoring_queue.length > 0 || snap.trait_queue.length > 0) return
     const t = setTimeout(() => void tickTime('xun'), 320)
     return () => clearTimeout(t)
   }, [auto, busy, snap])
@@ -100,6 +101,7 @@ export default function App() {
       <FamilyTree />
       <NamingModal />
       <TutoringModal />
+      <TraitPickModal />
       <MarriageModal />
       <SaveModal />
       <NewGameModal />

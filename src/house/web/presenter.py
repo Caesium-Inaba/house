@@ -2,7 +2,7 @@
 
 前后端的唯一边界：年龄、健康档位、关系称谓、候选人、命名建议等
 所有展示逻辑都在这里算好，前端不复制核心规则。
-core 演进时只需改本文件。
+所有面向玩家的文案经 i18n（data/locales/*.json）；core 演进时只需改本文件。
 """
 
 from __future__ import annotations
@@ -11,23 +11,55 @@ import random
 from typing import Any, Optional
 
 from .. import balance as B
-from ..core import inheritance, legacy, marriage
+from .. import i18n
+from ..core import genetics, inheritance, legacy, marriage
 from ..core import traits as T
+from ..core.health import death_reason_label
 from ..core.models import Character
 from ..core.world import World
 
-CULTURE_LABELS: dict[str, str] = {
-    "czech": "波希米亚",
-    "polish": "波兰",
-    "hungarian": "匈牙利",
-    "german": "德意志",
-}
+# 健康阈值 -> i18n 档位键（与 balance.HEALTH_TIERS 同界）
+HEALTH_TIER_KEYS: list[tuple[float, str]] = [
+    (float("-inf"), "dying"), (0.0, "near_death"), (1.0, "poor"),
+    (3.0, "fine"), (5.0, "good"), (7.0, "excellent"),
+]
 
-GENDER_LAW_LABELS: dict[str, str] = {
-    "male_preference": "男系优先",
-    "equal": "平等继承",
-    "female_preference": "女系优先",
-}
+
+def health_tier_key(health: float) -> str:
+    key = "dying"
+    for floor, k in HEALTH_TIER_KEYS:
+        if health >= floor:
+            key = k
+    return key
+
+
+def to_roman(n: int) -> str:
+    """1..3999 的罗马数字（几世展示用）。"""
+    table = [
+        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
+        (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+    ]
+    out = []
+    for value, symbol in table:
+        while n >= value:
+            out.append(symbol)
+            n -= value
+    return "".join(out) or "I"
+
+
+def display_name(world: World, char: Character) -> str:
+    """人物展示名：同宗同名者按出生序标几世（N≥2 才加后缀，如 布热季斯拉夫二世）。"""
+    if char.dynasty is None:
+        return char.name
+    rank = 1
+    for other in world.characters.values():
+        if other.id == char.id or other.dynasty != char.dynasty or other.name != char.name:
+            continue
+        if (other.birth_year, other.id) < (char.birth_year, char.id):
+            rank += 1
+    if rank < 2:
+        return char.name
+    return f"{char.name}{to_roman(rank)}{i18n.t('ordinal.suffix')}"
 
 HEALTH_BAR_MAX = 8.0  # 健康条归一化上限（出生约 5，极佳档 7+）
 
@@ -54,23 +86,25 @@ def _gene_polarity(tid: str) -> str:
 
 
 def _relation(world: World, player: Character, char: Character) -> Optional[str]:
-    """char 相对玩家（家主）的称谓，无直接关系返回 None。"""
+    """char 相对玩家（家主）的称谓（i18n key），无直接关系返回 None。"""
     if char.id == player.id:
-        return "自己"
+        return i18n.t("relation.self")
     if char.spouse == player.id:
-        return "丈夫" if char.gender == "male" else "妻子"
+        return i18n.t("relation.husband" if char.gender == "male" else "relation.wife")
     if char.father == player.id or char.mother == player.id:
-        return "儿子" if char.gender == "male" else "女儿"
+        return i18n.t("relation.son" if char.gender == "male" else "relation.daughter")
     for cid in player.children:
         parent = world.get(cid)
         if parent is None:
             continue
         if char.father == parent.id:
-            return "孙子" if char.gender == "male" else "孙女"
+            return i18n.t("relation.grandson" if char.gender == "male" else "relation.granddaughter")
         if char.mother == parent.id:
-            return "外孙" if char.gender == "male" else "外孙女"
+            return i18n.t(
+                "relation.grandson_maternal" if char.gender == "male" else "relation.granddaughter_maternal"
+            )
     if world.is_descendant(char.id, player.id):
-        return "后代"
+        return i18n.t("relation.descendant")
     return None
 
 
@@ -84,7 +118,7 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         genes.append(
             {
                 "id": tid,
-                "name": d.get("name", tid),
+                "name": T.trait_name(tid),
                 "state": state,  # 1 隐性携带 / 2 显性
                 "group": d.get("group"),
                 "level": d.get("level", 0),
@@ -100,7 +134,7 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
 
     opinions = sorted(char.opinions.items(), key=lambda kv: kv[1], reverse=True)
     top_opinions = [
-        {"id": oid, "name": world.name_of(oid), "value": val}
+        {"id": oid, "name": display_name(world, world.get(oid)), "value": val}
         for oid, val in opinions[:6]
         if world.get(oid) is not None
     ]
@@ -111,10 +145,12 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
     out: dict[str, Any] = {
         "id": char.id,
         "name": char.name,
+        "display_name": display_name(world, char),
         "gender": char.gender,
         "birth_year": char.birth_year,
         "death_year": char.death_year,
         "death_reason": char.death_reason,
+        "death_reason_label": death_reason_label(char.death_reason) if char.death_reason else None,
         "alive": alive,
         "age": char.age,
         "is_adult": char.is_adult,
@@ -131,7 +167,8 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         "education": char.education,
         "education_name": edu,
         "health": round(char.health, 2),
-        "health_tier": char.health_tier if alive else None,
+        "health_tier": health_tier_key(char.health) if alive else None,
+        "health_tier_label": i18n.t(f"health.tier.{health_tier_key(char.health)}") if alive else None,
         "health_norm": round(health_norm, 3),
         "money": round(char.money, 1),
         "prestige": round(char.prestige, 1),
@@ -145,7 +182,7 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         out["relation"] = _relation(world, player, char)
         dyn = world.dynasties.get(char.dynasty) if char.dynasty is not None else None
         out["culture"] = dyn.culture if dyn else "czech"
-        out["culture_label"] = CULTURE_LABELS.get(out["culture"], out["culture"])
+        out["culture_label"] = i18n.t(f"culture.{out['culture']}")
 
     # ── 教养 / 婚约（CK3） ──
     focus = char.education_focus
@@ -156,15 +193,13 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         if char.childhood_trait else None
     )
     out["education_focus"] = focus
-    out["education_focus_label"] = (
-        T.EDUCATION.get("routes", {}).get(focus, focus) if focus else None
-    )
+    out["education_focus_label"] = i18n.t(f"attr.{focus}") if focus else None
     out["education_score"] = char.education_score
     guardian = world.get(char.guardian)
     out["guardian"] = guardian.id if guardian else None
-    out["guardian_name"] = guardian.name if guardian else None
+    out["guardian_name"] = display_name(world, guardian) if guardian else None
     out["betrothed"] = (
-        {"id": char.betrothed, "name": bd.name if bd else None,
+        {"id": char.betrothed, "name": display_name(world, bd) if bd else None,
          "patrilineal": not any(
              e.get("patrilineal") is False and char.id in (e.get("a"), e.get("b"))
              for e in world.betrothals
@@ -185,7 +220,18 @@ def _naming_entries(world: World) -> list[dict]:
         names = pool.get("male" if child.gender == "male" else "female", [])
         # 仅 UI 展示用随机：独立种子，不触碰游戏 rng，保证读档复现
         ui_rng = random.Random(f"naming-{child.id}")
-        suggestions = [n for n in ui_rng.sample(names, min(8, len(names))) if n != child.name]
+        # 推荐名避开同父/同母手足（含已故）；手动输入不受约束（同名走「二世」）
+        used_by_siblings: set[str] = set()
+        for pid in (child.father, child.mother):
+            parent = world.get(pid)
+            if parent is None:
+                continue
+            for cid in parent.children:
+                sib = world.get(cid)
+                if sib is not None and sib.id != child.id:
+                    used_by_siblings.add(sib.name)
+        candidates = [n for n in ui_rng.sample(names, min(len(names), 12)) if n not in used_by_siblings]
+        suggestions = [n for n in candidates if n != child.name][:8]
         relation = None
         player = world.player
         if player is not None:
@@ -194,11 +240,11 @@ def _naming_entries(world: World) -> list[dict]:
             {
                 "child_id": child.id,
                 "suggested": entry.get("suggested", child.name),
-                "child_name": child.name,
+                "child_name": display_name(world, child),
                 "gender": child.gender,
                 "culture": culture,
-                "culture_label": CULTURE_LABELS.get(culture, culture),
-                "relation": relation or "后代",
+                "culture_label": i18n.t(f"culture.{culture}"),
+                "relation": relation or i18n.t("relation.descendant"),
                 "suggestions": suggestions,
             }
         )
@@ -235,9 +281,9 @@ def _dynasties(world: World) -> list[dict]:
                 "id": dyn.id,
                 "name": dyn.name,
                 "culture": dyn.culture,
-                "culture_label": CULTURE_LABELS.get(dyn.culture, dyn.culture),
+                "culture_label": i18n.t(f"culture.{dyn.culture}"),
                 "head": dyn.head,
-                "head_name": head.name if head else None,
+                "head_name": display_name(world, head) if head else None,
                 "renown": round(dyn.renown, 1),
                 "members": len(dyn.members),
                 "alive_members": len(alive_members),
@@ -268,7 +314,7 @@ def _tutoring_entries(world: World) -> list[dict]:
         guardian_candidates = [
             {
                 "id": g.id,
-                "name": g.name,
+                "name": display_name(world, g),
                 "age": g.age,
                 "skill": g.attributes.get(focus, 0),
                 "learning": g.attributes.get("learning", 0),
@@ -279,7 +325,7 @@ def _tutoring_entries(world: World) -> list[dict]:
         out.append(
             {
                 "child_id": child.id,
-                "name": child.name,
+                "name": display_name(world, child),
                 "gender": child.gender,
                 "age": child.age,
                 "childhood_trait": (
@@ -289,9 +335,39 @@ def _tutoring_entries(world: World) -> list[dict]:
                 "relation": _relation(world, player, child) if player else None,
                 "suggested_focus": focus,
                 "focus_options": [
-                    {"key": k, "label": v} for k, v in T.EDUCATION.get("routes", {}).items()
+                    {"key": k, "label": i18n.t(f"attr.{k}")} for k in T.education_routes()
                 ],
                 "guardian_candidates": guardian_candidates,
+            }
+        )
+    return out
+
+
+def _traitpick_entries(world: World) -> list[dict]:
+    player = world.player
+    out = []
+    for entry in world.trait_queue:
+        child = world.get(entry.get("child_id"))
+        if child is None:
+            continue
+        taught, stray = genetics.trait_pick_options(
+            world, child, random.Random(f"traits-{child.id}-{entry.get('age', child.age)}")
+        )
+        options = [
+            {"id": taught, "name": T.trait_name(taught), "kind": "taught"},
+            {"id": stray, "name": T.trait_name(stray), "kind": "stray"},
+        ]
+        guardian = world.get(child.guardian)
+        out.append(
+            {
+                "child_id": child.id,
+                "name": display_name(world, child),
+                "gender": child.gender,
+                "age": child.age,
+                "relation": _relation(world, player, child) if player else None,
+                "guardian_name": display_name(world, guardian) if guardian else None,
+                "existing": [T.trait_name(t) for t in sorted(child.traits)],
+                "options": options,
             }
         )
     return out
@@ -311,16 +387,15 @@ def betrothal_pools_payload(world: World) -> dict:
 def _legacies_payload(world: World) -> dict:
     player = world.player
     dyn = world.dynasties.get(player.dynasty) if player and player.dynasty is not None else None
-    level_of = legacy.level_of
     trees = []
     for t in legacy.TREES:
-        lvl = level_of(dyn, t["id"]) if dyn else 0
+        lvl = legacy.level_of(dyn, t["id"]) if dyn else 0
         cost = legacy.legacy_cost(lvl) if lvl < legacy.MAX_LEVEL else None
         trees.append(
             {
                 "id": t["id"],
-                "label": t["label"],
-                "desc": t["desc"],
+                "label": i18n.t(f"legacy.tree.{t['id']}"),
+                "desc": i18n.t(t["desc_key"]),
                 "level": lvl,
                 "max": legacy.MAX_LEVEL,
                 "cost": cost,
@@ -352,18 +427,19 @@ def build_snapshot(world: World) -> dict:
             "year": date.year,
             "month": date.month,
             "xun": date.xun,
-            "label": f"{date.year}年 {date.month}月 {B.XUN_NAMES[date.xun]}",
+            "label": i18n.t("date.label", year=date.year, month=date.month, xun=i18n.t(f"xun.{date.xun}")),
         },
         "player_id": world.player_id,
         "over": world.over,
         "over_reason": world.over_reason,
         "gender_law": world.gender_law,
-        "gender_law_label": GENDER_LAW_LABELS.get(world.gender_law, world.gender_law),
+        "gender_law_label": i18n.t(f"gender_law.{world.gender_law}"),
         "characters": [enrich_character(world, c, player) for c in world.characters.values()],
         "dynasties": _dynasties(world),
         "events": list(world.events),
         "naming_queue": _naming_entries(world),
         "tutoring_queue": _tutoring_entries(world),
+        "trait_queue": _traitpick_entries(world),
         "legacies": _legacies_payload(world),
         "population": {
             "alive": len(alive),
@@ -381,14 +457,17 @@ def build_snapshot(world: World) -> dict:
             "marriages": sum(1 for e in world.events if e.get("type") == "marriage"),
         },
         "meta": {
-            "attrs": [{"key": k, "label": v} for k, v in B.ATTRS.items()],
-            "xun_names": list(B.XUN_NAMES),
+            "attrs": [{"key": k, "label": i18n.t(f"attr.{k}")} for k in B.ATTRS],
+            "xun_names": [i18n.t(f"xun.{i}") for i in range(3)],
             "health_tiers": [
-                {"floor": None if f == float("-inf") else f, "label": n} for f, n in B.HEALTH_TIERS
+                {"floor": None if f == float("-inf") else f, "key": k, "label": i18n.t(f"health.tier.{k}")}
+                for f, k in HEALTH_TIER_KEYS
             ],
             "consort_limit": B.CONSORT_LIMIT,
             "start_year": B.START_YEAR,
-            "cultures": CULTURE_LABELS,
-            "gender_laws": GENDER_LAW_LABELS,
+            "cultures": {c: i18n.t(f"culture.{c}") for c in ("czech", "polish", "hungarian", "german")},
+            "gender_laws": {
+                g: i18n.t(f"gender_law.{g}") for g in ("male_preference", "equal", "female_preference")
+            },
         },
     }

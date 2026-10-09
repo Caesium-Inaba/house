@@ -88,7 +88,7 @@ export default function CharacterCard() {
           />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 19, color: 'var(--gold-bright)', letterSpacing: '0.06em' }}>
-              {char.name}
+              {char.display_name ?? char.name}
             </div>
             <div style={{ color: 'var(--ink-dim)', fontSize: 12.5, marginTop: 2 }}>
               {char.gender === 'male' ? '♂' : '♀'}
@@ -98,7 +98,7 @@ export default function CharacterCard() {
               {char.culture_label}
             </div>
             <div style={{ color: char.alive ? 'var(--ink-faint)' : 'var(--wax)', fontSize: 12.5, marginTop: 2 }}>
-              {char.alive ? `${char.age} 岁 · 在世` : `${char.birth_year}–${char.death_year} · 卒于${char.death_reason ?? '未知'} · 享年 ${char.age} 岁`}
+              {char.alive ? `${char.age} 岁 · 在世` : `${char.birth_year}–${char.death_year} · 卒于${char.death_reason_label ?? char.death_reason ?? '未知'} · 享年 ${char.age} 岁`}
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function CharacterCard() {
           <span className="attr-val">{char.health.toFixed(1)}</span>
         </div>
         <div style={{ color: 'var(--ink-faint)', fontSize: 12, textAlign: 'right', marginTop: -2 }}>
-          {char.alive ? char.health_tier : '（终末体魄）'}
+          {char.alive ? (char.health_tier_label ?? char.health_tier) : '（终末体魄）'}
         </div>
 
         {/* 六维 */}
@@ -228,7 +228,7 @@ export default function CharacterCard() {
             <div className="roster-item" onClick={() => select(spouse.id)}>
               <Sigil name={spouse.name} gender={spouse.gender} alive={spouse.alive} did={spouse.dynasty} size={30} />
               <span className="r-name">
-                {spouse.name}
+                {spouse.display_name ?? spouse.name}
                 {spouse.pregnant ? ' · ♡ 有孕' : ''}
               </span>
               <span className="r-age">{spouse.alive ? `${spouse.age}岁` : '已故'}</span>
@@ -243,7 +243,7 @@ export default function CharacterCard() {
             {children.map((c) => (
               <div key={c.id} className={`roster-item ${c.alive ? '' : 'dead'}`} onClick={() => select(c.id)}>
                 <Sigil name={c.name} gender={c.gender} alive={c.alive} did={c.dynasty} size={30} />
-                <span className="r-name">{c.name}</span>
+                <span className="r-name">{c.display_name ?? c.name}</span>
                 <span className="r-age">{c.alive ? `${c.age}岁` : `卒于${c.death_year}`}</span>
               </div>
             ))}

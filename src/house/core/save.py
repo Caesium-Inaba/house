@@ -74,6 +74,7 @@ def world_to_dict(world: World) -> dict:
         "events": [dict(e) for e in world.events],
         "naming_queue": [dict(e) for e in world.naming_queue],
         "tutoring_queue": [dict(e) for e in world.tutoring_queue],
+        "trait_queue": [dict(e) for e in world.trait_queue],
         "betrothals": [dict(e) for e in world.betrothals],
     }
 
@@ -101,6 +102,7 @@ def world_from_dict(data: dict) -> World:
     )
     world.naming_queue = [dict(e) for e in data.get("naming_queue", [])]
     world.tutoring_queue = [dict(e) for e in data.get("tutoring_queue", [])]
+    world.trait_queue = [dict(e) for e in data.get("trait_queue", [])]
     world.betrothals = [dict(e) for e in data.get("betrothals", [])]
     world.refresh_ages()
     return world
@@ -133,7 +135,9 @@ def safe_filename(name: str) -> str:
 def default_name(world: World) -> str:
     player = world.player
     dyn = world.dynasty_name_of(player.id) if player else ""
-    return f"{dyn}{world.date.year}年" if dyn else f"{world.date.year}年"
+    from .. import i18n
+
+    return i18n.t("save.default_name", dynasty=dyn, year=world.date.year) if dyn else str(world.date.year)
 
 
 def save_path_for(name: str, save_dir: str | Path = SAVE_DIR) -> Path:

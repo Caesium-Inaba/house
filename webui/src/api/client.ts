@@ -40,6 +40,8 @@ export const api = {
   newGame: (seed: number | null): Promise<ApiResponse> => post('/api/new', { seed }),
   tutoring: (child_id: number, focus: string, guardian_id: number | null): Promise<ApiResponse> =>
     post('/api/tutoring', { child_id, focus, guardian_id }),
+  traitPick: (child_id: number, trait: string): Promise<ApiResponse> =>
+    post('/api/traitpick', { child_id, trait }),
   betrothalPools: (): Promise<ApiResponse> => fetch('/api/betrothal/pools').then(jf),
   betrothal: (a_id: number, b_id: number, patrilineal: boolean): Promise<ApiResponse> =>
     post('/api/betrothal', { a_id, b_id, patrilineal }),

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .. import balance as B
+from .. import i18n
 from . import opinion
 from . import traits as T
 from .models import Character
@@ -86,8 +87,8 @@ def arrange_marriage(
     a.spouse, b.spouse = b.id, a.id
     a.patrilineal = b.patrilineal = patrilineal
     _apply_marriage_opinions(world, a, b)
-    world.add_log(f"⚭ {a.name} 与 {b.name} 缔结姻缘。")
-    world.add_event("marriage", f"{a.name} 与 {b.name} 缔结姻缘。", [a.id, b.id])
+    world.add_log(f"⚭ {i18n.t('event.marriage', a=a.name, b=b.name)}")
+    world.add_event("marriage", "event.marriage", {"a": a.name, "b": b.name}, [a.id, b.id])
     return True
 
 
@@ -119,11 +120,11 @@ def arrange_betrothal(
     a.betrothed, b.betrothed = b.id, a.id
     opinion.add_opinion(a, b.id, 10)
     opinion.add_opinion(b, a.id, 10)
-    world.add_log(f"💍 {a.name} 与 {b.name} 缔结婚约（{'母系' if not patrilineal else '父系'}）。")
+    line_label = i18n.t("line.matrilineal") if not patrilineal else i18n.t("line.patrilineal")
+    world.add_log(f"💍 {i18n.t('event.betrothal', a=a.name, b=b.name, line=line_label)}")
     world.add_event(
-        "betrothal",
-        f"{a.name} 与 {b.name} 缔结婚约（{'母系' if not patrilineal else '父系'}）。",
-        [a.id, b.id],
+        "betrothal", "event.betrothal",
+        {"a": a.name, "b": b.name, "line": line_label}, [a.id, b.id],
     )
     return True
 
@@ -139,7 +140,11 @@ def fulfill_betrothals(world: World) -> None:
             if b is not None:
                 b.betrothed = None
             if a is not None and b is not None:
-                world.add_log(f"💔 {a.name} 与 {b.name} 的婚约因变故落空。")
+                world.add_log(f"💔 {i18n.t('event.betrothal_broken', a=a.name, b=b.name)}")
+                world.add_event(
+                    "chronicle", "event.betrothal_broken",
+                    {"a": a.name, "b": b.name}, [a.id, b.id],
+                )
             continue
         if a.age >= B.CHILDHOOD_END and b.age >= B.CHILDHOOD_END:
             ok = arrange_marriage(world, a.id, b.id, patrilineal=bd.get("patrilineal"))
@@ -147,7 +152,7 @@ def fulfill_betrothals(world: World) -> None:
             a.betrothed = None
             b.betrothed = None
             if not ok:
-                world.add_log(f"💔 {a.name} 与 {b.name} 婚约期满却未能成婚。")
+                world.add_log(f"💔 {i18n.t('event.betrothal_failed', a=a.name, b=b.name)}")
 
 
 def betrothal_pools(world: World, player_id: int) -> tuple[list[Character], list[Character]]:

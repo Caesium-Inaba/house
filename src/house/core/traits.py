@@ -1,4 +1,4 @@
-"""特质库与数据加载。"""
+"""特质库与数据加载（显示名经 i18n，本模块只管数值与结构）。"""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import json
 import pathlib
 from functools import lru_cache
 from typing import Any
+
+from ..i18n import t as _t
 
 _DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
 
@@ -23,7 +25,7 @@ def _build_traits() -> dict[str, dict]:
 
     # 展开等级化先天特质组：intellect_n3 / intellect_p2 ...
     for group, spec in raw.get("congenital_groups", {}).items():
-        for level_str, display in spec["levels"].items():
+        for level_str in spec["levels"]:
             level = int(level_str)
             tid = f"{group}_{'n' if level < 0 else 'p'}{abs(level)}"
             # 每级显式表（CK3 不等差）优先，否则线性
@@ -32,7 +34,6 @@ def _build_traits() -> dict[str, dict]:
             else:
                 attrs = {a: level * spec.get("per_level_attrs", 1) for a in spec.get("attrs", [])}
             db[tid] = {
-                "name": display,
                 "type": "congenital",
                 "group": group,
                 "level": level,
@@ -52,12 +53,20 @@ CHILDHOOD: dict[str, dict] = _trait_data.get("childhood", {})
 PERSONALITY_IDS: list[str] = list(PERSONALITY)
 
 
+def _t(key: str, fallback: str) -> str:
+    from .. import i18n
+
+    name = i18n.t(key)
+    return name if name != key else fallback
+
+
 def trait_def(tid: str) -> dict:
     return TRAITS.get(tid, {})
 
 
 def trait_name(tid: str) -> str:
-    return TRAITS.get(tid, {}).get("name", tid)
+    """显示名完全来自 i18n（data/locales/*.json），缺键时回退原 id 便于发现漏译。"""
+    return _t(f"trait.{tid}", str(tid))
 
 
 def is_congenital(tid: str) -> bool:
@@ -190,30 +199,39 @@ def education_attr_bonus(education: str | None) -> dict[str, int]:
 
 
 def education_name(education: str | None) -> str:
+    """教育特质全名（官方汉化采录），如 edu_diplomacy_4 → 幕后操控人。"""
     if not education or not education.startswith("edu_"):
         return ""
     parts = education.split("_")
     if len(parts) != 3:
         return education
     _, route, level = parts
-    route_name = EDUCATION.get("routes", {}).get(route, route)
-    return f"{route_name}{level}级"
+    return _t(f"edu.{route}.{level}", education)
 
 
-# ── 童年特质（CK3：6 岁显现，隐含推定教育方向） ──
+def education_routes() -> list[str]:
+    return list(EDUCATION.get("routes", []))
+
+
+# ── 童年特质（CK3：6 岁显现，隐含推定教育方向；16 岁按 converts 表转换） ──
 
 CHILDHOOD_IDS: list[str] = [k for k in CHILDHOOD if not k.startswith("_")]
 
 
 def childhood_name(tid: str) -> str:
-    return CHILDHOOD.get(tid, {}).get("name", tid)
+    return _t(f"trait.{tid}", str(tid))
 
 
 def childhood_focus(tid: str) -> str:
     return CHILDHOOD.get(tid, {}).get("focus", "diplomacy")
 
 
-def roll_childhood_trait(world: World, child) -> None:
+def childhood_conversion(tid: str) -> str:
+    """成年时童年特质转化为的性格特质 id。"""
+    return CHILDHOOD.get(tid, {}).get("converts", "")
+
+
+def roll_childhood_trait(world, child) -> None:
     """为满 6 岁的孩子抽取童年特质。"""
     if child.childhood_trait is None:
         child.childhood_trait = world.rng.choice(CHILDHOOD_IDS)

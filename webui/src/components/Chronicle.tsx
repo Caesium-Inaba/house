@@ -3,12 +3,13 @@
 import { useMemo, useState, type JSX } from 'react'
 import { useStore } from '../store'
 import type { EventInfo } from '../types'
-import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle, IconBrush } from '../icons'
+import { t } from '../i18n'
+import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle, IconBrush, IconSprout } from '../icons'
 
-const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'betrothal', 'adulthood', 'tutoring', 'death', 'succession', 'legacy', 'extinction', 'chronicle'] as const
+const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'betrothal', 'trait', 'adulthood', 'tutoring', 'death', 'succession', 'legacy', 'extinction', 'chronicle'] as const
 
 function dayLabel(e: EventInfo): string {
-  if (e.year == null) return '先前的岁月'
+  if (e.year == null) return t('day.before')
   const xun = e.xun != null ? ` ${['上旬', '中旬', '下旬'][e.xun]}` : ''
   return `${e.year}年${e.month != null ? ` ${e.month}月` : ''}${xun}`
 }
@@ -76,8 +77,8 @@ export default function Chronicle() {
   return (
     <section className="panel">
       <div className="panel-head">
-        <span className="panel-title">编年史</span>
-        <span className="panel-sub">{snap.events.length} 条记事</span>
+        <span className="panel-title">{t('panel.chronicle')}</span>
+        <span className="panel-sub">{snap.events.length} {t('panel.events_count')}</span>
       </div>
 
       {snap.naming_queue.length > 0 && (
@@ -107,9 +108,30 @@ export default function Chronicle() {
             <IconBrush />
           </div>
           <div className="text" style={{ color: '#e0d3a0' }}>
-            待开蒙 · {snap.tutoring_queue[0].name}（{snap.tutoring_queue[0].relation ?? ''}）
-            {snap.tutoring_queue.length > 1 ? ` · 另有 ${snap.tutoring_queue.length - 1} 位` : ''}
-            {' —— 点击举行教养礼'}
+            {t('todo.tutoring', {
+              name: snap.tutoring_queue[0].name,
+              rel: snap.tutoring_queue[0].relation ?? '',
+              more: snap.tutoring_queue.length > 1 ? t('todo.naming_more', { n: snap.tutoring_queue.length - 1 }) : '',
+            })}
+          </div>
+        </div>
+      )}
+
+      {snap.trait_queue.length > 0 && (
+        <div
+          className="event pending"
+          style={{ margin: '8px 16px 0', width: 'calc(100% - 32px)' }}
+          onClick={() => openModal('traitpick')}
+        >
+          <div className="icon" style={{ color: 'var(--verdant)' }}>
+            <IconSprout />
+          </div>
+          <div className="text" style={{ color: '#c9d8a8' }}>
+            {t('todo.traitpick', {
+              name: snap.trait_queue[0].name,
+              rel: snap.trait_queue[0].relation ?? '',
+              more: snap.trait_queue.length > 1 ? t('todo.naming_more', { n: snap.trait_queue.length - 1 }) : '',
+            })}
           </div>
         </div>
       )}

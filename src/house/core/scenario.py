@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .. import balance as B
+from .. import i18n
 from . import traits as T
 from .models import Character
 from .world import World
@@ -158,6 +159,6 @@ def build_default_world(seed: Optional[int] = None) -> World:
            education="edu_learning_3", personality={"chaste", "content"})
 
     world.refresh_ages()
-    world.add_log("1066年1月 上旬：弗拉季斯拉夫成为普热梅斯利德家族家主。")
-    world.add_event("succession", "弗拉季斯拉夫成为普热梅斯利德家族家主。", [vratislav.id])
+    world.add_log(f"1066年1月 上旬：{i18n.t('event.scenario_start')}")
+    world.add_event("succession", "event.scenario_start", {}, [vratislav.id])
     return world

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .. import balance as B
+from .. import i18n
 from . import genetics
 from . import legacy
 from . import traits as T
@@ -104,8 +105,11 @@ def monthly_settlement(world: World) -> None:
             mother.pregnancy_months = B.PREGNANCY_MONTHS
             mother.pregnancy_father = father.id
             dyn = world.dynasty_name_of(father.id)
-            world.add_log(f"♡ {mother.name} 有了身孕（{dyn}）。")
-            world.add_event("pregnancy", f"{mother.name} 有了身孕（{dyn}）。", [mother.id, father.id])
+            world.add_log(f"♡ {i18n.t('event.pregnancy', mother=mother.name, dynasty=dyn)}")
+            world.add_event(
+                "pregnancy", "event.pregnancy",
+                {"mother": mother.name, "dynasty": dyn}, [mother.id, father.id],
+            )
 
 
 def _childbed_risk(mother: Character) -> float:
@@ -134,10 +138,10 @@ def childbirth(world: World, mother: Character) -> None:
         mother.children_born += 1
 
     names = "、".join(k.name for k in kids)
-    world.add_log(f"👶 {mother.name} 诞下 {names}。")
+    world.add_log(f"👶 {i18n.t('event.birth', mother=mother.name, children=names)}")
     world.add_event(
-        "birth",
-        f"{mother.name} 诞下 {names}。",
+        "birth", "event.birth",
+        {"mother": mother.name, "children": names},
         [mother.id] + [k.id for k in kids],
     )
 
@@ -148,4 +152,4 @@ def childbirth(world: World, mother: Character) -> None:
     if world.rng.random() < _childbed_risk(mother):
         from .health import kill
 
-        kill(world, mother, "难产")
+        kill(world, mother, "childbirth")

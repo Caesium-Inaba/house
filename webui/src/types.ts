@@ -24,6 +24,7 @@ export interface OpinionInfo {
 export interface CharacterInfo {
   id: number
   name: string
+  display_name: string
   gender: 'male' | 'female'
   birth_year: number
   death_year: number | null
@@ -45,6 +46,8 @@ export interface CharacterInfo {
   education_name: string
   health: number
   health_tier: string | null
+  health_tier_label: string | null
+  death_reason_label: string | null
   health_norm: number
   money: number
   prestige: number
@@ -71,6 +74,8 @@ export interface EventInfo {
   month: number | null
   xun: number | null
   type: string
+  key?: string
+  params?: Record<string, string | number>
   text: string
   actors: number[]
 }
@@ -103,6 +108,17 @@ export interface TutoringEntry {
     learning: number
     suggested: boolean
   }[]
+}
+
+export interface TraitPickEntry {
+  child_id: number
+  name: string
+  gender: 'male' | 'female'
+  age: number
+  relation: string | null
+  guardian_name: string | null
+  existing: string[]
+  options: { id: string; name: string; kind: 'taught' | 'stray' }[]
 }
 
 export interface LegacyTree {
@@ -172,6 +188,7 @@ export interface Snapshot {
   events: EventInfo[]
   naming_queue: NamingEntry[]
   tutoring_queue: TutoringEntry[]
+  trait_queue: TraitPickEntry[]
   legacies: LegacyInfo
   population: PopulationInfo
   heir: CharacterInfo | null

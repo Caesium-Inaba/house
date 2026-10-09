@@ -21,7 +21,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import balance as B
-from ..core import legacy, marriage, save, sim
+from .. import i18n
+from ..core import genetics, legacy, marriage, save, sim
+from ..core import traits as T
 from ..core.scenario import build_default_world
 from ..core.world import World
 from .presenter import (
@@ -50,6 +52,11 @@ class TutoringBody(BaseModel):
     child_id: int
     focus: str
     guardian_id: Optional[int] = None
+
+
+class TraitPickBody(BaseModel):
+    child_id: int
+    trait: str
 
 
 class BetrothalBody(BaseModel):
@@ -128,7 +135,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
     @app.post("/api/new")
     async def new_game(body: NewBody) -> dict:
         state["world"] = build_default_world(body.seed)
-        return {"ok": True, "message": "新的篇章开始了", "state": snap()}
+        return {"ok": True, "message": i18n.t("api.new_game"), "state": snap()}
 
     @app.post("/api/tick")
     async def tick(body: TickBody) -> dict:
@@ -156,7 +163,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
             raise HTTPException(400, "找不到该孩子")
         child.name = name
         w.naming_queue.pop(idx)
-        return {"ok": True, "message": f"孩子得名「{name}」", "state": snap()}
+        return {"ok": True, "message": i18n.t("api.named", name=name), "state": snap()}
 
     @app.get("/api/marriage/candidates")
     async def get_candidates() -> dict:
@@ -171,17 +178,17 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         w = world()
         player = w.player
         if player is None:
-            return {"ok": False, "message": "没有家主", "state": snap()}
+            return {"ok": False, "message": i18n.t("api.no_player"), "state": snap()}
         if player.spouse is not None:
             return {
                 "ok": False,
-                "message": f"已达眷属上限：配偶 {1}/{B.CONSORT_LIMIT}",
+                "message": i18n.t("api.consort_limit", n=1, limit=B.CONSORT_LIMIT),
                 "state": snap(),
             }
         ok = marriage.arrange_marriage(w, player.id, body.target_id)
         return {
             "ok": ok,
-            "message": "姻缘缔结" if ok else "无法缔结这门婚事",
+            "message": i18n.t("api.married") if ok else i18n.t("api.marriage_denied"),
             "state": snap(),
         }
 
@@ -195,7 +202,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         ok = marriage.arrange_betrothal(w, body.a_id, body.b_id, patrilineal=body.patrilineal)
         return {
             "ok": ok,
-            "message": "婚约已成" if ok else "无法缔结婚约",
+            "message": i18n.t("api.betrothed") if ok else i18n.t("api.betrothal_denied"),
             "state": snap(),
         }
 
@@ -218,14 +225,33 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         w.tutoring_queue.pop(idx)
         from ..core import traits as T
 
-        focus_label = T.EDUCATION.get("routes", {}).get(body.focus, body.focus)
-        msg = f"{child.name} 开蒙（{focus_label}）"
-        if guardian is not None:
-            msg += f"，师从 {guardian.name}"
-        w.add_log(f"📖 {msg}。")
+        params = {
+            "child": child.name,
+            "focus": i18n.t(f"attr.{body.focus}"),
+            "guardian": guardian.name if guardian is not None else None,
+        }
+        key = "event.tutoring" if guardian is not None else "event.tutoring_no_guardian"
+        w.add_log(f"📖 {i18n.t(key, **params)}")
         actors = [child.id] + ([guardian.id] if guardian is not None else [])
-        w.add_event("tutoring", f"{msg}。", actors)
-        return {"ok": True, "message": msg, "state": snap()}
+        w.add_event("tutoring", key, params, actors)
+        return {"ok": True, "message": i18n.t(key, **params), "state": snap()}
+
+    @app.post("/api/traitpick")
+    async def do_traitpick(body: TraitPickBody) -> dict:
+        w = world()
+        child = w.get(body.child_id)
+        if child is None:
+            raise HTTPException(400, "找不到该孩子")
+        idx = next(
+            (i for i, e in enumerate(w.trait_queue) if e.get("child_id") == body.child_id), None
+        )
+        if idx is None:
+            raise HTTPException(400, "该孩子不在性情抉择队列中")
+        if body.trait not in T.PERSONALITY:
+            raise HTTPException(400, "未知的性格特质")
+        genetics.apply_trait_pick(w, child, body.trait)
+        w.trait_queue.pop(idx)
+        return {"ok": True, "message": i18n.t("api.trait_set", trait=T.trait_name(body.trait)), "state": snap()}
 
     @app.post("/api/legacy")
     async def do_legacy(body: LegacyBody) -> dict:

@@ -1,8 +1,9 @@
-"""健康与死亡。"""
+"""健康与死亡（死因 reason 传 i18n death.* 键；旧存档的中文原文兼容显示）。"""
 
 from __future__ import annotations
 
 from .. import balance as B
+from .. import i18n
 from .models import Character
 from .world import World
 
@@ -29,13 +30,22 @@ def death_chance(char: Character) -> float:
     return min(0.95, p)
 
 
+def death_reason_label(reason: str) -> str:
+    """支持旧存档原文与新版 death.* 键。"""
+    label = i18n.t(f"death.{reason}")
+    return label if label != f"death.{reason}" else reason
+
+
 def kill(world: World, char: Character, reason: str) -> None:
     if not char.is_alive:
         return
     char.death_year = world.date.year
     char.death_reason = reason
-    world.add_log(f"⚰ {char.name}（{char.age}岁）去世：{reason}。")
-    world.add_event("death", f"{char.name}（{char.age}岁）去世：{reason}。", [char.id])
+    label = death_reason_label(reason)
+    world.add_log(f"⚰ {i18n.t('event.death', name=char.name, age=char.age, reason=label)}")
+    world.add_event(
+        "death", "event.death", {"name": char.name, "age": char.age, "reason": label}, [char.id]
+    )
 
 
 def yearly_health(world: World) -> None:
@@ -43,12 +53,12 @@ def yearly_health(world: World) -> None:
         age = char.age
         # 儿童早夭（近似）
         if age < B.CHILDHOOD_END and world.rng.random() < B.CHILD_MORTALITY_YEARLY:
-            kill(world, char, "早夭")
+            kill(world, char, "childhood")
             continue
         # 成年人意外（近似）
         if age >= B.CHILDHOOD_END and age < B.OLD_AGE_DEATH_AGE:
             if world.rng.random() < B.ADULT_ACCIDENT_YEARLY:
-                kill(world, char, "意外")
+                kill(world, char, "accident")
                 continue
         if age >= B.HEALTH_LOSS_START_AGE:
             chance = B.HEALTH_LOSS_CHANCE + (age - B.HEALTH_LOSS_START_AGE) * B.HEALTH_LOSS_CHANCE_INCREMENT
@@ -62,4 +72,4 @@ def yearly_health(world: World) -> None:
             char.health -= B.DISEASE_HEALTH_LOSS
 
         if world.rng.random() < death_chance(char):
-            kill(world, char, "疾病" if char.health < 3 else "寿终正寝")
+            kill(world, char, "disease" if char.health < 3 else "old_age")

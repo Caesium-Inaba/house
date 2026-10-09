@@ -161,6 +161,38 @@ def main() -> None:
     else:
         print("[betrothal] SKIP  无可订孩子")
 
+    # ── 性情抉择（9/12/15 岁） + 童年特质/转换存在性 ──
+    snap = client.get("/api/state").json()
+    kids = [c for c in snap["characters"] if c["alive"] and not c["is_adult"]]
+    if not snap["trait_queue"] and kids:
+        # 快进到第一个抉择点
+        for _ in range(12):
+            s2 = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+            if s2["over"] or s2["trait_queue"]:
+                snap = s2
+                break
+            if s2["naming_queue"]:
+                e = s2["naming_queue"][0]
+                snap = client.post("/api/naming", json={"child_id": e["child_id"], "name": e["suggested"]}).json()["state"]
+            if s2["tutoring_queue"]:
+                e = s2["tutoring_queue"][0]
+                gid = e["guardian_candidates"][0]["id"] if e["guardian_candidates"] else None
+                snap = client.post("/api/tutoring", json={"child_id": e["child_id"], "focus": e["suggested_focus"], "guardian_id": gid}).json()["state"]
+    if snap["trait_queue"]:
+        entry = snap["trait_queue"][0]
+        assert entry["options"][0]["kind"] == "taught" and entry["options"][1]["kind"] == "stray"
+        r = client.post("/api/traitpick", json={"child_id": entry["child_id"], "trait": entry["options"][0]["id"]})
+        res = r.json()
+        assert res["ok"], res
+        child = next(c for c in res["state"]["characters"] if c["id"] == entry["child_id"])
+        assert entry["options"][0]["id"] in [t["id"] for t in child["traits"]]
+        print("[traitpick] OK", entry["name"], "->", entry["options"][0]["name"])
+    else:
+        print("[traitpick] SKIP  快进 12 年内无抉择点")
+    # 世数展示抽查：display_name 字段存在
+    assert all("display_name" in c for c in snap["characters"])
+    print("[display_name] OK")
+
     print("\nWebUI 冒烟测试全部通过 ✓")
 
 

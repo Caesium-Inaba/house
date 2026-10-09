@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import type { ApiResponse, Snapshot } from './types'
 import { api } from './api/client'
 
-export type ModalKind = 'naming' | 'tutoring' | 'marriage' | 'saves' | 'new' | null
+export type ModalKind = 'naming' | 'tutoring' | 'traitpick' | 'marriage' | 'saves' | 'new' | null
 
 export interface Toast {
   id: number
@@ -131,5 +131,10 @@ export async function tickTime(unit: 'xun' | 'year'): Promise<void> {
     useStore.getState().setAuto(false)
     useStore.getState().openModal('naming')
     useStore.getState().toast('家族添了新丁，需要命名', 'info')
+  } else if (snap && (snap.tutoring_queue.length > 0 || snap.trait_queue.length > 0)) {
+    useStore.getState().setAuto(false)
+    useStore
+      .getState()
+      .openModal(snap.tutoring_queue.length > 0 ? 'tutoring' : 'traitpick')
   }
 }

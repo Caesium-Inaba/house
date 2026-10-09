@@ -13,11 +13,11 @@ from .models import Dynasty
 from .world import World
 
 TREES: list[dict] = [
-    {"id": "blood", "label": "血脉", "desc": "生育与血脉延续"},
-    {"id": "warfare", "label": "武略", "desc": "勇武与体魄"},
-    {"id": "law", "label": "律法", "desc": "产业与秩序"},
-    {"id": "guile", "label": "谋略", "desc": "谋略与心机"},
-    {"id": "glory", "label": "荣光", "desc": "威望与威名"},
+    {"id": "blood", "desc_key": "legacy.desc.blood"},
+    {"id": "warfare", "desc_key": "legacy.desc.warfare"},
+    {"id": "law", "desc_key": "legacy.desc.law"},
+    {"id": "guile", "desc_key": "legacy.desc.guile"},
+    {"id": "glory", "desc_key": "legacy.desc.glory"},
 ]
 
 MAX_LEVEL = 5
@@ -89,18 +89,20 @@ def family_modifiers(world: World, dynasty_id: int | None) -> "FamilyMods":
 
 def can_buy(world: World, dynasty_id: int, tree: str) -> tuple[bool, str, int]:
     """能否解锁下一级：返回 (允许, 原因, 花费)。"""
+    from .. import i18n
+
     dyn = world.dynasties.get(dynasty_id)
     if dyn is None:
-        return False, "没有王朝", 0
+        return False, i18n.t("api.no_dynasty"), 0
     tree_ids = {t["id"] for t in TREES}
     if tree not in tree_ids:
-        return False, "未知传承树", 0
+        return False, i18n.t("api.legacy_unknown_tree"), 0
     cur = level_of(dyn, tree)
     if cur >= MAX_LEVEL:
-        return False, "该传承树已满级", 0
+        return False, i18n.t("api.legacy_maxed"), 0
     cost = legacy_cost(cur)
     if dyn.renown < cost:
-        return False, f"威名不足（需 {cost}）", cost
+        return False, i18n.t("api.legacy_no_renown", cost=cost), cost
     return True, "", cost
 
 
@@ -108,9 +110,16 @@ def buy(world: World, dynasty_id: int, tree: str) -> tuple[bool, str]:
     ok, msg, cost = can_buy(world, dynasty_id, tree)
     if not ok:
         return False, msg
+    from .. import i18n
+
     dyn = world.dynasties[dynasty_id]
     dyn.renown -= cost
     dyn.legacies[tree] = level_of(dyn, tree) + 1
-    world.add_log(f"✦ 王朝解锁传承：{next(t['label'] for t in TREES if t['id'] == tree)} 第 {dyn.legacies[tree]} 级。")
-    world.add_event("legacy", f"王朝解锁传承：{next(t['label'] for t in TREES if t['id'] == tree)} 第 {dyn.legacies[tree]} 级。")
-    return True, f"传承已解锁（-{cost} 威名）"
+    params = {
+        "tree": i18n.t(f"legacy.tree.{tree}"),
+        "level": dyn.legacies[tree],
+        "cost": cost,
+    }
+    world.add_log(f"✦ {i18n.t('event.legacy', **params)}")
+    world.add_event("legacy", "event.legacy", params, [dyn.head] if dyn.head else [])
+    return True, i18n.t("api.legacy_bought", cost=cost)

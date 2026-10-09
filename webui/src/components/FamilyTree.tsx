@@ -1,6 +1,7 @@
 /* 全屏家族树：世代分层 + 婚姻连线 + 缩放平移 + 选中联动 */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { t } from '../i18n'
 import { useStore } from '../store'
 import type { CharacterInfo } from '../types'
 
@@ -128,13 +129,14 @@ export default function FamilyTree() {
 
             {/* 连线 */}
             {layout.links.map((l, i) => (
-              <path key={i} d={l.d} fill="none" stroke={l.kind === 'marriage' ? 'rgba(201,169,97,0.55)' : 'rgba(138,116,74,0.4)'} strokeWidth={l.kind === 'marriage' ? 2 : 1.4} />
+              <path key={i} d={l.d} fill="none" stroke="rgba(138,116,74,0.4)" strokeWidth={1.4} />
             ))}
 
             {/* 节点 */}
             {layout.drawings.map((n) => {
               const isSel = n.char.id === selectedId
               const isPlayer = n.char.id === snap.player_id
+              const shownName = n.char.display_name ?? n.char.name
               return (
                 <g
                   key={n.char.id}
@@ -154,14 +156,14 @@ export default function FamilyTree() {
                     <SigilSvg name={n.char.name} gender={n.char.gender} alive={n.char.alive} size={30} />
                   </g>
                   <text x={n.w - 8} y={20} textAnchor="end" fontSize="13.5" fill={n.char.alive ? 'var(--ink)' : 'var(--ink-faint)'} style={{ textDecoration: n.char.alive ? 'none' : 'line-through' }}>
-                    {truncate(n.char.name, 4)}
+                    {truncate(shownName, 5)}
                   </text>
                   <text x={n.w - 10} y={40} textAnchor="end" fontSize="11.5" fill={n.char.alive ? 'var(--ink-dim)' : '#8a6a55'}>
-                    {n.char.alive ? `${n.char.age} 岁` : `†${n.char.death_year} ${n.char.death_reason ?? ''}`}
+                    {n.char.alive ? `${n.char.age} 岁` : `†${n.char.death_year} ${n.char.death_reason_label ?? ''}`}
                   </text>
                   {isPlayer && (
                     <text x={n.w / 2} y={NODE_H + 15} textAnchor="middle" fontSize="11" fill="var(--gold)" letterSpacing="3">
-                      ▲ 家主
+                      ▲ {t('tree.head_mark')}
                     </text>
                   )}
                 </g>
@@ -221,31 +223,17 @@ function buildLayout(chars: CharacterInfo[], playerId: number) {
         queue.push(cid)
       }
     }
-    if (c.spouse != null && !include.has(c.spouse)) {
-      include.add(c.spouse)
-      queue.push(c.spouse)
-    }
   }
 
-  /* unit 划分 */
+  /* unit 划分：全部单人节点（不展示配偶；子女挂父系/母系血亲锚点） */
   const unitOf = new Map<number, string>()
   const units = new Map<string, Unit>()
   for (const id of include) {
     const c = byId.get(id)!
     if (unitOf.has(id)) continue
-    if (c.spouse != null && include.has(c.spouse)) {
-      const key = `u${Math.min(id, c.spouse)}`
-      const mate = byId.get(c.spouse)!
-      const a = c.id < mate.id ? c : mate
-      const b = c.id < mate.id ? mate : c
-      units.set(key, { key, members: [a, b], parents: [], childUnits: [], gen: 0, x: 0, extent: 0 })
-      unitOf.set(a.id, key)
-      unitOf.set(b.id, key)
-    } else {
-      const key = `u${id}`
-      units.set(key, { key, members: [c], parents: [], childUnits: [], gen: 0, x: 0, extent: 0 })
-      unitOf.set(id, key)
-    }
+    const key = `u${id}`
+    units.set(key, { key, members: [c], parents: [], childUnits: [], gen: 0, x: 0, extent: 0 })
+    unitOf.set(id, key)
   }
 
   /* 世代：person gen = max(parent gen)+1；unit gen = min(member gen) */
@@ -268,22 +256,28 @@ function buildLayout(chars: CharacterInfo[], playerId: number) {
     u.gen = Math.min(...u.members.map((m) => personGen.get(m.id) ?? 0))
   }
 
-  /* unit 父子边：unit 的孩子 = 成员孩子（并集、去重），父 unit 取父亲的 unit（若父母 unit 不同则都记） */
+  /* unit 父子边：子女挂「血亲锚点」—— 父系婚姻挂父，母系婚姻挂母，缺位回退另一方 */
   for (const u of units.values()) {
-    const kidIds = new Set<number>()
-    for (const m of u.members) for (const cid of m.children) if (include.has(cid)) kidIds.add(cid)
-    for (const cid of kidIds) {
-      const ku = unitOf.get(cid)
-      if (ku && ku !== u.key && !u.childUnits.includes(ku)) u.childUnits.push(ku)
+    const m = u.members[0]
+    const anchorId =
+      m.patrilineal && m.father != null && include.has(m.father)
+        ? m.father
+        : !m.patrilineal && m.mother != null && include.has(m.mother)
+          ? m.mother
+          : m.father != null && include.has(m.father)
+            ? m.father
+            : m.mother != null && include.has(m.mother)
+              ? m.mother
+              : null
+    if (anchorId != null) {
+      const pu = unitOf.get(anchorId)
+      if (pu && pu !== u.key && !u.parents.includes(pu)) u.parents.push(pu)
     }
-    // 父母 unit
-    for (const m of u.members) {
-      for (const pid of [m.father, m.mother]) {
-        if (pid != null && unitOf.has(pid)) {
-          const pu = unitOf.get(pid)!
-          if (pu !== u.key && !u.parents.includes(pu)) u.parents.push(pu)
-        }
-      }
+  }
+  for (const u of units.values()) {
+    for (const puKey of u.parents) {
+      const pu = units.get(puKey)
+      if (pu && !pu.childUnits.includes(u.key)) pu.childUnits.push(u.key)
     }
   }
 
@@ -350,44 +344,32 @@ function buildLayout(chars: CharacterInfo[], playerId: number) {
     nodes.set(id, { cx: p.x + p.w / 2, cy: p.y + NODE_H / 2 })
   }
 
-  /* 连线 */
-  const links: { d: string; kind: 'marriage' | 'child' }[] = []
+  /* 连线（纯血缘：父母 -> 子女总线；不画婚姻） */
+  const links: { d: string; kind: 'child' }[] = []
   for (const u of units.values()) {
-    if (u.members.length === 2) {
-      const a = nodePos.get(u.members[0].id)!
-      const b = nodePos.get(u.members[1].id)!
-      const y = a.y + NODE_H / 2
-      links.push({ d: `M${a.x + NODE_W} ${y} L${b.x} ${y}`, kind: 'marriage' })
-    }
     if (u.childUnits.length) {
-      const memberPos = u.members.map((m) => nodePos.get(m.id)!)
-      const midX = (Math.min(...memberPos.map((p) => p.x)) + Math.max(...memberPos.map((p) => p.x + NODE_W))) / 2
-      const topY = Math.min(...memberPos.map((p) => p.y)) + NODE_H / 2
+      const my = nodePos.get(u.members[0].id)!
+      const midX = my.x + NODE_W / 2
+      const topY = my.y + NODE_H / 2
       const busY = u.gen * GEN_H + NODE_H + 34
       links.push({ d: `M${midX} ${topY} L${midX} ${busY}`, kind: 'child' })
-      let hasBus = false
       let busMinX = Infinity
       let busMaxX = -Infinity
       for (const ku of u.childUnits) {
         const kuUnit = units.get(ku)!
-        for (const m of kuUnit.members) {
-          const cp = nodePos.get(m.id)!
-          const isChildOfUnion = u.members.some((mm) => mm.children.includes(m.id))
-          if (!isChildOfUnion) continue
-          const cx = cp.x + NODE_W / 2
-          const cy = cp.y - 8
-          busMinX = Math.min(busMinX, cx)
-          busMaxX = Math.max(busMaxX, cx)
-          links.push({ d: `M${cx} ${busY} L${cx} ${cy}`, kind: 'child' })
-          hasBus = true
-        }
+        const cp = nodePos.get(kuUnit.members[0].id)!
+        const cx = cp.x + NODE_W / 2
+        const cy = cp.y - 8
+        busMinX = Math.min(busMinX, cx)
+        busMaxX = Math.max(busMaxX, cx)
+        links.push({ d: `M${cx} ${busY} L${cx} ${cy}`, kind: 'child' })
       }
-      if (hasBus) links.push({ d: `M${busMinX} ${busY} L${busMaxX} ${busY}`, kind: 'child' })
+      links.push({ d: `M${busMinX} ${busY} L${busMaxX} ${busY}`, kind: 'child' })
     }
   }
 
   const genLabels = new Map<number, string>()
-  for (let g = 0; g <= maxGen; g++) genLabels.set(g, `${g + 1} 世`)
+  for (let g = 0; g <= maxGen; g++) genLabels.set(g, `${g + 1} ${t("tree.gen")}`)
 
   const xs = [...nodePos.values()].map((p) => p.x)
   const minY = 0
