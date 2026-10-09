@@ -1,30 +1,39 @@
 {
-  "_comment": "特质库。结构化驱动，改这里即可改游戏内容。levels 的键为等级(-3..-1, 1..3)，值为显示名。",
+  "_comment": "特质库（数值锚定 CK3 wiki 1.20）。congenital_groups.levels_attrs 为每级显式加成（CK3 各级不等差），levels 为显示名。personality 的数值字段均来自 wiki Traits 页采录。",
   "congenital_groups": {
     "intellect": {
       "label": "智力",
-      "attrs": ["diplomacy", "stewardship", "learning"],
-      "per_level_attrs": 1,
-      "per_level_health": 0.0,
-      "per_level_prowess": 0,
+      "levels_attrs": {
+        "1": {"diplomacy": 2, "stewardship": 1, "intrigue": 2, "learning": 3},
+        "2": {"diplomacy": 3, "stewardship": 2, "intrigue": 3, "learning": 4},
+        "3": {"diplomacy": 5, "stewardship": 3, "intrigue": 4, "learning": 6},
+        "-1": {"diplomacy": -1, "stewardship": -1, "intrigue": -2, "learning": -2},
+        "-2": {"diplomacy": -2, "stewardship": -2, "intrigue": -3, "learning": -4},
+        "-3": {"diplomacy": -5, "stewardship": -3, "intrigue": -4, "learning": -6}
+      },
       "levels": {
-        "-3": "愚钝",
-        "-2": "迟钝",
-        "-1": "鲁钝",
+        "-3": "低能",
+        "-2": "愚钝",
+        "-1": "迟钝",
         "1": "机敏",
         "2": "聪慧",
         "3": "天才"
-      }
+      },
+      "edu_factor": {"3": 20, "2": 15, "1": 10, "-1": 10, "-2": 15, "-3": 20}
     },
     "beauty": {
       "label": "容貌",
-      "attrs": ["diplomacy"],
-      "per_level_attrs": 1,
-      "per_level_health": 0.0,
-      "per_level_prowess": 0,
+      "levels_attrs": {
+        "1": {"diplomacy": 1},
+        "2": {"diplomacy": 3},
+        "3": {"diplomacy": 5},
+        "-1": {"diplomacy": -1},
+        "-2": {"diplomacy": -2},
+        "-3": {"diplomacy": -3}
+      },
       "levels": {
-        "-3": "丑陋",
-        "-2": "难看",
+        "-3": "奇丑",
+        "-2": "丑陋",
         "-1": "平凡",
         "1": "清秀",
         "2": "俊美",
@@ -47,39 +56,65 @@
       }
     }
   },
+  "childhood": {
+    "_comment": "6 岁显现的童年特质；focus 为其推定的教育方向（CK3 默认行为）。",
+    "charming": {"name": "可爱", "focus": "diplomacy"},
+    "curious": {"name": "好奇", "focus": "learning"},
+    "rowdy": {"name": "顽皮", "focus": "martial"},
+    "bossy": {"name": "跋扈", "focus": "stewardship"},
+    "peculiar": {"name": "孤僻", "focus": "intrigue"}
+  },
   "traits": {
-    "fecund": {"name": "多产", "type": "congenital", "fertility": 50.0, "health_years": 5},
+    "fecund": {"name": "多产", "type": "congenital", "fertility": 25.0, "decay_offset_years": 5},
     "inbred": {
       "name": "近亲孳息",
       "type": "congenital",
       "fertility": -50.0,
       "health": -1.5,
       "prowess": -2,
+      "edu_penalty": 20,
+      "extra_filter": true,
       "attrs": {"diplomacy": -5, "martial": -5, "stewardship": -5, "intrigue": -5, "learning": -5}
     },
     "pure_blooded": {"name": "纯血", "type": "congenital", "fertility": 10.0, "health": 0.25, "inbreeding_resist": 0.5},
     "giant": {"name": "巨人", "type": "congenital", "prowess": 3, "health": -0.5},
     "dwarf": {"name": "侏儒", "type": "congenital", "prowess": -2, "health": -0.25},
-    "albino": {"name": "白化", "type": "congenital", "fertility": 0.0},
-    "sickly": {"name": "多病", "type": "congenital", "health": -1.5, "fertility": 0.0}
+    "albino": {"name": "白化", "type": "congenital", "health": -1.0},
+    "sickly": {"name": "多病", "type": "congenital", "health": -1.5}
   },
   "personality": {
-    "brave": {"name": "勇敢", "opposites": ["craven"]},
-    "craven": {"name": "怯懦", "opposites": ["brave"]},
-    "generous": {"name": "慷慨", "opposites": ["greedy"]},
-    "greedy": {"name": "贪婪", "opposites": ["generous"]},
-    "honest": {"name": "诚实", "opposites": ["deceitful"]},
-    "deceitful": {"name": "狡诈", "opposites": ["honest"]},
-    "diligent": {"name": "勤勉", "opposites": ["lazy"]},
-    "lazy": {"name": "懒惰", "opposites": ["diligent"]},
-    "cruel": {"name": "残暴", "opposites": ["compassionate"]},
-    "compassionate": {"name": "仁慈", "opposites": ["cruel"]},
-    "patient": {"name": "耐心", "opposites": ["wroth"]},
-    "wroth": {"name": "暴怒", "opposites": ["patient"]},
-    "ambitious": {"name": "雄心", "opposites": ["content"]},
-    "content": {"name": "知足", "opposites": ["ambitious"]},
-    "lustful": {"name": "好色", "opposites": ["chaste"], "fertility": 25.0},
-    "chaste": {"name": "忠贞", "opposites": ["lustful"], "fertility": -25.0}
+    "brave": {"name": "勇敢", "opposites": ["craven"], "attrs": {"martial": 2}, "prowess": 3, "opp_opinion": -10},
+    "craven": {"name": "怯懦", "opposites": ["brave"], "attrs": {"martial": -2, "intrigue": 2}, "prowess": -3, "opp_opinion": -10},
+    "calm": {"name": "沉着", "opposites": ["wroth"], "attrs": {"diplomacy": 1, "intrigue": 1}, "stress_loss": 0.10, "opp_opinion": -10},
+    "wroth": {"name": "暴怒", "opposites": ["calm", "patient"], "attrs": {"diplomacy": -1, "martial": 3, "intrigue": -1}, "opp_opinion": -10},
+    "chaste": {"name": "忠贞", "opposites": ["lustful"], "attrs": {"learning": 2}, "fertility": -25.0, "opp_opinion": -10},
+    "lustful": {"name": "好色", "opposites": ["chaste"], "attrs": {"intrigue": 2}, "fertility": 25.0, "opp_opinion": -10},
+    "diligent": {"name": "勤勉", "opposites": ["lazy"], "attrs": {"diplomacy": 2, "stewardship": 3, "learning": 3}, "stress_loss": -0.50, "opp_opinion": -10},
+    "lazy": {"name": "懒惰", "opposites": ["diligent"], "attrs": {"diplomacy": -1, "martial": -1, "stewardship": -1, "intrigue": -1, "learning": -1}, "stress_loss": 0.50, "opp_opinion": -10},
+    "compassionate": {"name": "仁慈", "opposites": ["cruel"], "attrs": {"diplomacy": 2}, "stress_gain": 0.25, "opp_opinion": -10},
+    "cruel": {"name": "残暴", "opposites": ["compassionate"], "attrs": {"diplomacy": -2, "intrigue": 2}, "stress_loss": 0.15, "opp_opinion": -10},
+    "generous": {"name": "慷慨", "opposites": ["greedy"], "attrs": {"diplomacy": 3}, "money_pct": -0.10, "opp_opinion": -15},
+    "greedy": {"name": "贪婪", "opposites": ["generous"], "attrs": {"diplomacy": -2}, "money_pct": 0.05, "stress_gain": 0.10, "opp_opinion": -10},
+    "gregarious": {"name": "合群", "opposites": ["shy"], "attrs": {"diplomacy": 2}, "opp_opinion": -10},
+    "shy": {"name": "羞怯", "opposites": ["gregarious"], "attrs": {"diplomacy": -2, "learning": 1}, "opp_opinion": -10},
+    "honest": {"name": "诚实", "opposites": ["deceitful"], "attrs": {"diplomacy": 2, "intrigue": -4}, "opp_opinion": -10},
+    "deceitful": {"name": "狡诈", "opposites": ["honest"], "attrs": {"diplomacy": -2, "intrigue": 4}, "opp_opinion": -10},
+    "humble": {"name": "谦卑", "opposites": ["arrogant"], "piety_monthly": 0.5, "opp_opinion": -15},
+    "arrogant": {"name": "傲慢", "opposites": ["humble"], "prestige_monthly": 1.0, "opp_opinion": -15},
+    "just": {"name": "公正", "opposites": ["arbitrary"], "attrs": {"stewardship": 2, "intrigue": -3, "learning": 1}, "opp_opinion": -10},
+    "arbitrary": {"name": "任性", "opposites": ["just"], "attrs": {"stewardship": -2, "intrigue": 3, "learning": -1}, "opp_opinion": -10},
+    "patient": {"name": "耐心", "opposites": ["impatient", "wroth"], "attrs": {"learning": 2}, "opp_opinion": -15},
+    "impatient": {"name": "性急", "opposites": ["patient"], "attrs": {"learning": -2}, "prestige_pct": 0.20, "opp_opinion": -15},
+    "temperate": {"name": "节制", "opposites": ["gluttonous"], "attrs": {"stewardship": 2}, "health": 0.25, "opp_opinion": -10},
+    "gluttonous": {"name": "贪食", "opposites": ["temperate"], "attrs": {"stewardship": -2}, "stress_loss": 0.10, "opp_opinion": -10},
+    "trusting": {"name": "多信", "opposites": ["paranoid"], "attrs": {"diplomacy": 2, "intrigue": -2}, "opp_opinion": -10},
+    "paranoid": {"name": "多疑", "opposites": ["trusting"], "attrs": {"diplomacy": -1, "intrigue": 3}, "stress_gain": 1.0, "opp_opinion": -10},
+    "zealous": {"name": "狂热", "opposites": ["cynical"], "attrs": {"martial": 2}, "piety_pct": 0.20, "opp_opinion": -10},
+    "cynical": {"name": "玩世", "opposites": ["zealous"], "attrs": {"intrigue": 2, "learning": 2}, "piety_pct": -0.20, "opp_opinion": -10},
+    "ambitious": {"name": "雄心", "opposites": ["content"], "prestige_monthly": 2.0, "opp_opinion": -10},
+    "content": {"name": "知足", "opposites": ["ambitious"], "stress_loss": 0.20, "opinion_of_kin": 5, "opp_opinion": -10},
+    "forgiving": {"name": "宽恕", "opposites": ["vengeful"], "attrs": {"diplomacy": 2, "intrigue": -2, "learning": 1}, "opinion_of_kin": 10, "opp_opinion": -10},
+    "vengeful": {"name": "记仇", "opposites": ["forgiving"], "attrs": {"diplomacy": -2, "intrigue": 2, "prowess": 2}, "stress_loss": 0.10, "opp_opinion": -10}
   },
   "education": {
     "routes": {
@@ -89,6 +124,6 @@
       "intrigue": "谋略",
       "learning": "学识"
     },
-    "per_level_attrs": {"1": 2, "2": 4, "3": 6, "4": 8, "5": 10}
+    "per_level_attrs": {"1": 2, "2": 5, "3": 8, "4": 10}
   }
 }

@@ -63,8 +63,10 @@ def handle_player_death(world: World) -> None:
         world.over = True
         world.over_reason = "家族绝嗣，无人继承"
         world.add_log("☠ 家族绝嗣，故事就此终结。")
+        world.add_event("extinction", "家族绝嗣，故事就此终结。")
         return
     world.player_id = heir.id
     if heir.dynasty is not None and heir.dynasty in world.dynasties:
         world.dynasties[heir.dynasty].head = heir.id
     world.add_log(f"👑 {heir.name} 继承家主之位（{heir.age}岁）。")
+    world.add_event("succession", f"{heir.name} 继承家主之位（{heir.age}岁）。", [heir.id, player.id])

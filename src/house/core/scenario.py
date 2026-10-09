@@ -43,8 +43,9 @@ def _adult(
     )
     cong = T.congenital_attr_bonus(genes)
     edu = T.education_attr_bonus(education)
+    pers = T.personality_attrs(char.traits)
     for k in B.ATTR_KEYS:
-        char.attributes[k] = max(B.ATTR_MIN, min(B.ATTR_MAX, full_attrs[k] + cong.get(k, 0) + edu.get(k, 0)))
+        char.attributes[k] = max(B.ATTR_MIN, min(B.ATTR_MAX, full_attrs[k] + cong.get(k, 0) + edu.get(k, 0) + pers.get(k, 0)))
     world.add_character(char)
     return char
 
@@ -158,4 +159,5 @@ def build_default_world(seed: Optional[int] = None) -> World:
 
     world.refresh_ages()
     world.add_log("1066年1月 上旬：弗拉季斯拉夫成为普热梅斯利德家族家主。")
+    world.add_event("succession", "弗拉季斯拉夫成为普热梅斯利德家族家主。", [vratislav.id])
     return world
