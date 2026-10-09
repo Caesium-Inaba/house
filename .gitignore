@@ -13,3 +13,7 @@ wheels/
 # 游戏存档
 save.json
 saves/
+
+
+# 截图
+shot-*.png
