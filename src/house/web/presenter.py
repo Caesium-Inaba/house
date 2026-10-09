@@ -48,18 +48,25 @@ def to_roman(n: int) -> str:
 
 
 def display_name(world: World, char: Character) -> str:
-    """人物展示名：同宗同名者按出生序标几世（N≥2 才加后缀，如 布热季斯拉夫二世）。"""
-    if char.dynasty is None:
+    """人物展示名：世数只数「做过家主」者 —— 同名历代家主按继位顺序给罗马数字。
+
+    - 未做过家主的人物不标世数。
+    - 同名同宗不同时为家主的旁支不计数（因此后世可能比前世更大，如继到旁支）。
+    - 展示为「名字II」形式（不带「世」字）。
+    """
+    history = world.head_history
+    if char.id not in history:
         return char.name
     rank = 1
-    for other in world.characters.values():
-        if other.id == char.id or other.dynasty != char.dynasty or other.name != char.name:
-            continue
-        if (other.birth_year, other.id) < (char.birth_year, char.id):
+    for pid in history:
+        if pid == char.id:
+            break
+        p = world.get(pid)
+        if p is not None and p.name == char.name:
             rank += 1
     if rank < 2:
         return char.name
-    return f"{char.name}{to_roman(rank)}{i18n.t('ordinal.suffix')}"
+    return f"{char.name}{to_roman(rank)}"
 
 HEALTH_BAR_MAX = 8.0  # 健康条归一化上限（出生约 5，极佳档 7+）
 
@@ -206,6 +213,11 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
          )}
         if char.betrothed else None
     )
+    out["sexuality"] = char.sexuality
+    out["sexuality_label"] = i18n.t(f"sexuality.{char.sexuality}")
+    if player is not None:
+        out["opinion_of_player"] = char.opinions.get(player.id)  # 被看人 → 家主
+        out["player_opinion"] = player.opinions.get(char.id)      # 家主 → 被看人
     return out
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .. import balance as B
-from . import fertility, genetics, health, inheritance, legacy, marriage, opinion
+from . import fertility, genetics, health, inheritance, legacy, marriage, opinion, queues
 from . import traits as T
 from .world import World
 
@@ -21,11 +21,20 @@ def tick_xun(world: World) -> None:
     if rolled_year:
         yearly_settlement(world)
 
+    # 事件不阻塞时间（CK3 式）：待办逾期 2 个月未处理则自动落定
+    queues.sweep(world)
+
     world.refresh_ages()
     inheritance.handle_player_death(world)
 
 
 def advance(world: World, xuns: int, stop_on_naming: bool = False) -> None:
+    """推进 xuns 旬。
+
+    备份（旧行为）：stop_on_naming=True 时遇到待命名队列即停——事件阻塞时间流动。
+    该机制已保留；事件窗口化上线后默认走非阻塞（False），如需恢复阻塞式推进，
+    把 server.py /api/tick 的 stop_on_naming 改回 True 即可。
+    """
     for _ in range(xuns):
         tick_xun(world)
         if world.over:

@@ -28,6 +28,7 @@ class World:
     tutoring_queue: list[dict] = field(default_factory=list)  # 待定教养的玩家血亲儿童
     trait_queue: list[dict] = field(default_factory=list)  # 待「性情抉择」的玩家血亲儿童（9/12/15 岁）
     betrothals: list[dict] = field(default_factory=list)  # [{a, b, patrilineal}]
+    head_history: list[int] = field(default_factory=list)  # 历代家主继位顺序（世数计数依据）
     over: bool = False
     over_reason: str = ""
     gender_law: str = "male_preference"  # male_preference / equal / female_preference
@@ -57,6 +58,18 @@ class World:
         if cid is None:
             return None
         return self.characters.get(cid)
+
+    def stamp_due(self, entry: dict, lag: int = 2) -> dict:
+        """事件入队时间戳：due = 当前月份 + lag 个月（序列化为 [year, month]）。
+
+        事件不阻塞时间流动（CK3 式），逾期未处理由 core/queues.sweep 自动落定。
+        """
+        dy, dm = self.date.year, self.date.month + lag
+        while dm > 12:
+            dm -= 12
+            dy += 1
+        entry["due"] = [dy, dm]
+        return entry
 
     @property
     def player(self) -> Optional[Character]:

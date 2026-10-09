@@ -4,16 +4,15 @@ import { useState } from 'react'
 import { useStore, runAction } from '../../store'
 import { api } from '../../api/client'
 import { Sigil } from '../../heraldry'
-import type { TutoringEntry } from '../../types'
 
 export default function TutoringModal() {
   const snap = useStore((s) => s.snap)
   const modal = useStore((s) => s.modal)
   const closeModal = useStore((s) => s.closeModal)
   const busy = useStore((s) => s.busy)
-  const entry: TutoringEntry | null = snap?.tutoring_queue[0] ?? null
+  const queue = snap?.tutoring_queue ?? []
   const [selectedChild, setSelectedChild] = useState<number | null>(null)
-  const child = entry ?? snap?.tutoring_queue.find((e) => e.child_id === selectedChild) ?? null
+  const child = queue.find((e) => e.child_id === (selectedChild ?? queue[0]?.child_id)) ?? null
   const [focus, setFocus] = useState<string | null>(null)
   const [guardianId, setGuardianId] = useState<number | null>(null)
 

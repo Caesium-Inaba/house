@@ -11,7 +11,7 @@ from .models import Character, Dynasty
 from .time import Date
 from .world import World
 
-SAVE_VERSION = 2
+SAVE_VERSION = 3
 SAVE_DIR = Path("saves")
 
 # 旧档 log 的 emoji 前缀 -> 事件类型
@@ -72,6 +72,7 @@ def world_to_dict(world: World) -> dict:
         "dynasties": [d.to_dict() for d in world.dynasties.values()],
         "log": list(world.log),
         "events": [dict(e) for e in world.events],
+        "head_history": list(world.head_history),
         "naming_queue": [dict(e) for e in world.naming_queue],
         "tutoring_queue": [dict(e) for e in world.tutoring_queue],
         "trait_queue": [dict(e) for e in world.trait_queue],
@@ -101,6 +102,10 @@ def world_from_dict(data: dict) -> World:
         [dict(e) for e in legacy_events] if legacy_events is not None else _events_from_log(world.log)
     )
     world.naming_queue = [dict(e) for e in data.get("naming_queue", [])]
+    legacy_heads = data.get("head_history")
+    world.head_history = list(legacy_heads) if legacy_heads is not None else (
+        [data["player_id"]] if data.get("player_id") is not None else []
+    )
     world.tutoring_queue = [dict(e) for e in data.get("tutoring_queue", [])]
     world.trait_queue = [dict(e) for e in data.get("trait_queue", [])]
     world.betrothals = [dict(e) for e in data.get("betrothals", [])]

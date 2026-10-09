@@ -1,17 +1,69 @@
 /* 中栏：结构化编年史 —— 日期分组 / 类型筛选 / 人名可点 */
 
-import { useMemo, useState, type JSX } from 'react'
+import { useMemo, useState, memo, type JSX } from 'react'
 import { useStore } from '../store'
-import type { EventInfo } from '../types'
+import type { CharacterInfo, EventInfo } from '../types'
 import { t } from '../i18n'
 import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle, IconBrush, IconSprout } from '../icons'
 
 const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'betrothal', 'trait', 'adulthood', 'tutoring', 'death', 'succession', 'legacy', 'extinction', 'chronicle'] as const
 
+/* 事件行：props 引用全等时跳过渲染（store 已做引用稳定化） */
+const EventRow = memo(
+  function EventRow({ e, actors, head }: { e: EventInfo; actors: (CharacterInfo | null)[]; head: boolean }) {
+    const Icon = EVENT_ICONS[e.type] ?? IconScroll
+    const color = EVENT_COLORS[e.type] ?? 'var(--ink-faint)'
+    return (
+      <div>
+        {head && <div className="day-divider">{dayLabel(e)}</div>}
+        <div className={`event type-${e.type}`}>
+          <div className="icon" style={{ color }}>
+            <Icon />
+          </div>
+          <div className="text">{renderActors(e, actors)}</div>
+        </div>
+      </div>
+    )
+  },
+  (a, b) => a.e === b.e && a.head === b.head && a.actors.every((x, i) => x === b.actors[i]),
+)
+
 function dayLabel(e: EventInfo): string {
   if (e.year == null) return t('day.before')
   const xun = e.xun != null ? ` ${['上旬', '中旬', '下旬'][e.xun]}` : ''
   return `${e.year}年${e.month != null ? ` ${e.month}月` : ''}${xun}`
+}
+
+/* 事件分日渲染：actor 名字可点。人物引用由父层预取（引用稳定化后可跳过） */
+function renderActors(e: EventInfo, actors: (CharacterInfo | null)[]): (string | JSX.Element)[] {
+  let nodes: (string | JSX.Element)[] = [e.text]
+  for (const ch of actors) {
+    if (!ch) continue
+    nodes = nodes.flatMap((node) => {
+      if (typeof node !== 'string' || !node.includes(ch.name)) return [node]
+      const parts = node.split(ch.name)
+      const out: (string | JSX.Element)[] = []
+      parts.forEach((p, i) => {
+        if (i > 0)
+          out.push(
+            <span
+              key={`${ch.id}-${i}`}
+              className="who"
+              onClick={(ev) => {
+                ev.stopPropagation()
+                useStore.getState().select(ch.id)
+                useStore.getState().setDrawerOpen(true)
+              }}
+            >
+              {ch.name}
+            </span>,
+          )
+        out.push(p)
+      })
+      return out
+    })
+  }
+  return nodes
 }
 
 export default function Chronicle() {
@@ -31,48 +83,24 @@ export default function Chronicle() {
 
   const shown = useMemo(() => {
     const events = [...(snap?.events ?? [])].reverse()
-    return events.filter((e) => {
+    const filtered = events.filter((e) => {
       if (filter !== 'all' && e.type !== filter) return false
-      if (query && !e.text.includes(query)) return false
+      if (query && !e.text.includes(query)) return true
+      if (query) return false
       return true
     })
+    // 日期分组标记：与上一条同日则不重复显示分隔
+    const out: { e: EventInfo; head: boolean }[] = []
+    let lastDay = ''
+    for (const e of filtered) {
+      const day = dayLabel(e)
+      out.push({ e, head: day !== lastDay })
+      lastDay = day
+    }
+    return out
   }, [snap?.events, filter, query])
 
   if (!snap) return <section className="panel" />
-
-  /* 文本渲染：actor 名字可点 */
-  function renderText(e: EventInfo) {
-    let nodes: (string | JSX.Element)[] = [e.text]
-    for (const aid of e.actors) {
-      const ch = byId.get(aid)
-      if (!ch) continue
-      nodes = nodes.flatMap((node) => {
-        if (typeof node !== 'string' || !node.includes(ch.name)) return [node]
-        const parts = node.split(ch.name)
-        const out: (string | JSX.Element)[] = []
-        parts.forEach((p, i) => {
-          if (i > 0)
-            out.push(
-              <span
-                key={`${aid}-${i}`}
-                className="who"
-                onClick={(ev) => {
-                  ev.stopPropagation()
-                  select(aid)
-                }}
-              >
-                {ch.name}
-              </span>,
-            )
-          out.push(p)
-        })
-        return out
-      })
-    }
-    return nodes
-  }
-
-  let lastDay = ''
 
   return (
     <section className="panel">
@@ -91,7 +119,7 @@ export default function Chronicle() {
             <IconCradle />
           </div>
           <div className="text" style={{ color: 'var(--gold-bright)' }}>
-            待命名 · {snap.naming_queue[0].suggested}（{snap.naming_queue[0].relation}）
+            {t('todo.naming_prefix')} · <span className="who" onClick={(ev) => { ev.stopPropagation(); select(snap.naming_queue[0].child_id); useStore.getState().setDrawerOpen(true) }}>{snap.naming_queue[0].suggested}</span>（{snap.naming_queue[0].relation}）
             {snap.naming_queue.length > 1 ? ` · 另有 ${snap.naming_queue.length - 1} 位` : ''}
             {' —— 点击举行命名礼'}
           </div>
@@ -108,11 +136,20 @@ export default function Chronicle() {
             <IconBrush />
           </div>
           <div className="text" style={{ color: '#e0d3a0' }}>
-            {t('todo.tutoring', {
-              name: snap.tutoring_queue[0].name,
-              rel: snap.tutoring_queue[0].relation ?? '',
-              more: snap.tutoring_queue.length > 1 ? t('todo.naming_more', { n: snap.tutoring_queue.length - 1 }) : '',
-            })}
+            {t('todo.tutoring_prefix')} ·{' '}
+            <span
+              className="who"
+              onClick={(ev) => {
+                ev.stopPropagation()
+                select(snap.tutoring_queue[0].child_id)
+                useStore.getState().setDrawerOpen(true)
+              }}
+            >
+              {snap.tutoring_queue[0].name}
+            </span>
+            （{snap.tutoring_queue[0].relation ?? ''}）
+            {snap.tutoring_queue.length > 1 ? t('todo.naming_more', { n: snap.tutoring_queue.length - 1 }) : ''}
+            {' —— 点击举行教养礼'}
           </div>
         </div>
       )}
@@ -127,11 +164,20 @@ export default function Chronicle() {
             <IconSprout />
           </div>
           <div className="text" style={{ color: '#c9d8a8' }}>
-            {t('todo.traitpick', {
-              name: snap.trait_queue[0].name,
-              rel: snap.trait_queue[0].relation ?? '',
-              more: snap.trait_queue.length > 1 ? t('todo.naming_more', { n: snap.trait_queue.length - 1 }) : '',
-            })}
+            {t('todo.traitpick_prefix')} ·{' '}
+            <span
+              className="who"
+              onClick={(ev) => {
+                ev.stopPropagation()
+                select(snap.trait_queue[0].child_id)
+                useStore.getState().setDrawerOpen(true)
+              }}
+            >
+              {snap.trait_queue[0].name}
+            </span>
+            （{snap.trait_queue[0].relation ?? ''}）
+            {snap.trait_queue.length > 1 ? t('todo.naming_more', { n: snap.trait_queue.length - 1 }) : ''}
+            {' —— 点击举行性情抉择'}
           </div>
         </div>
       )}
@@ -160,24 +206,14 @@ export default function Chronicle() {
       <div className="panel-body">
         {shown.length === 0 && <div className="empty">尚无大事发生</div>}
         <div className="chronicle">
-          {shown.map((e, i) => {
-            const day = dayLabel(e)
-            const showDay = day !== lastDay
-            lastDay = day
-            const Icon = EVENT_ICONS[e.type] ?? IconScroll
-            const color = EVENT_COLORS[e.type] ?? 'var(--ink-faint)'
-            return (
-              <div key={`${e.year}-${e.month}-${e.xun}-${snap.events.length - i}-${e.type}`}>
-                {showDay && <div className="day-divider">{day}</div>}
-                <div className={`event type-${e.type}`}>
-                  <div className="icon" style={{ color }}>
-                    <Icon />
-                  </div>
-                  <div className="text">{renderText(e)}</div>
-                </div>
-              </div>
-            )
-          })}
+          {shown.map(({ e, head }) => (
+            <EventRow
+              key={`${e.year ?? 'x'}-${e.month ?? 'x'}-${e.xun ?? 'x'}-${e.type}-${e.text}`}
+              e={e}
+              actors={e.actors.map((id) => byId.get(id) ?? null)}
+              head={head}
+            />
+          ))}
         </div>
       </div>
     </section>

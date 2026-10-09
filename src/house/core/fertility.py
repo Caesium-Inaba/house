@@ -145,9 +145,11 @@ def childbirth(world: World, mother: Character) -> None:
         [mother.id] + [k.id for k in kids],
     )
 
+    # 起名礼只为本宗族新生儿举行（外族新生儿可在人物栏中直接改名）
+    player = world.player
     for k in kids:
-        if world.is_descendant(k.id, world.player_id):
-            world.naming_queue.append({"child_id": k.id, "suggested": k.name})
+        if player is not None and k.dynasty == player.dynasty:
+            world.naming_queue.append(world.stamp_due({"child_id": k.id, "suggested": k.name}))
 
     if world.rng.random() < _childbed_risk(mother):
         from .health import kill

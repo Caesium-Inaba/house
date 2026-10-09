@@ -67,6 +67,10 @@ export interface CharacterInfo {
   guardian: number | null
   guardian_name: string | null
   betrothed: { id: number; name: string | null; patrilineal: boolean } | null
+  sexuality: 'heterosexual' | 'homosexual' | 'bisexual' | 'asexual'
+  sexuality_label: string
+  opinion_of_player: number | null
+  player_opinion: number | null
 }
 
 export interface EventInfo {
@@ -183,6 +187,7 @@ export interface Snapshot {
   over_reason: string
   gender_law: string
   gender_law_label: string
+  debug: boolean
   characters: CharacterInfo[]
   dynasties: DynastyInfo[]
   events: EventInfo[]

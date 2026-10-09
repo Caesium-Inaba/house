@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from .. import balance as B
 from .. import i18n
-from ..core import genetics, legacy, marriage, save, sim
+from ..core import genetics, health, legacy, marriage, save, sim
 from ..core import traits as T
 from ..core.scenario import build_default_world
 from ..core.world import World
@@ -100,7 +100,7 @@ def _saves_payload() -> list[dict]:
     return saves
 
 
-def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI:
+def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         save.migrate_legacy()
@@ -118,7 +118,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
             allow_headers=["*"],
         )
 
-    state: dict = {"world": None}
+    state: dict = {"world": None, "debug": debug}
 
     def world() -> World:
         if state["world"] is None:
@@ -126,7 +126,9 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         return state["world"]
 
     def snap() -> dict:
-        return build_snapshot(world())
+        payload = build_snapshot(world())
+        payload["debug"] = bool(state.get("debug"))
+        return payload
 
     @app.get("/api/state")
     async def get_state() -> dict:
@@ -142,7 +144,9 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         w = world()
         if not w.over:
             if body.unit == "year":
-                sim.advance(w, XUNS_PER_YEAR, stop_on_naming=True)
+                # 备份（旧行为）：stop_on_naming=True = 事件弹出即停（阻塞时间）。
+                # 事件窗口化后事件不再阻塞推进；恢复阻塞式改回 True 即可。
+                sim.advance(w, XUNS_PER_YEAR, stop_on_naming=False)
             else:
                 sim.tick_xun(w)
         return {"ok": True, "message": None, "state": snap()}
@@ -223,18 +227,8 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         child.education_focus = body.focus
         child.guardian = guardian.id if guardian is not None else None
         w.tutoring_queue.pop(idx)
-        from ..core import traits as T
-
-        params = {
-            "child": child.name,
-            "focus": i18n.t(f"attr.{body.focus}"),
-            "guardian": guardian.name if guardian is not None else None,
-        }
-        key = "event.tutoring" if guardian is not None else "event.tutoring_no_guardian"
-        w.add_log(f"📖 {i18n.t(key, **params)}")
-        actors = [child.id] + ([guardian.id] if guardian is not None else [])
-        w.add_event("tutoring", key, params, actors)
-        return {"ok": True, "message": i18n.t(key, **params), "state": snap()}
+        message = genetics.add_tutoring_event(w, child, body.focus, guardian)
+        return {"ok": True, "message": message, "state": snap()}
 
     @app.post("/api/traitpick")
     async def do_traitpick(body: TraitPickBody) -> dict:
@@ -252,6 +246,50 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None) -> FastAPI
         genetics.apply_trait_pick(w, child, body.trait)
         w.trait_queue.pop(idx)
         return {"ok": True, "message": i18n.t("api.trait_set", trait=T.trait_name(body.trait)), "state": snap()}
+
+    @app.post("/api/rename")
+    async def rename(body: NamingBody) -> dict:
+        """给任意未满周岁的新生儿改名（不限宗族）。"""
+        w = world()
+        child = w.get(body.child_id)
+        if child is None:
+            raise HTTPException(400, "找不到该人物")
+        if not child.is_alive or child.age >= 1:
+            raise HTTPException(400, i18n.t("api.too_old_to_rename"))
+        name = body.name.strip()[:12]
+        if not name:
+            raise HTTPException(400, "名字不能为空")
+        child.name = name
+        return {"ok": True, "message": i18n.t("api.renamed", name=name), "state": snap()}
+
+    @app.post("/api/suicide")
+    async def suicide() -> dict:
+        """调试用自杀：立即结束家主生命（正常/调试模式均可用）。"""
+        w = world()
+        player = w.player
+        if player is None or not player.is_alive or w.over:
+            return {"ok": False, "message": "没有在世的家主", "state": snap()}
+        from ..core import inheritance
+
+        health.kill(w, player, "suicide")
+        inheritance.handle_player_death(w)
+        return {"ok": True, "message": i18n.t("api.suicide"), "state": snap()}
+
+    @app.post("/api/debug/kill")
+    async def debug_kill(body: MarriageBody) -> dict:
+        """仅 --debug 模式：指名杀人，死因=调试。"""
+        if not state.get("debug"):
+            raise HTTPException(403, "需要 --debug 启动")
+        w = world()
+        target = w.get(body.target_id)
+        if target is None or not target.is_alive:
+            raise HTTPException(400, "目标不存在或已亡故")
+        from ..core import inheritance
+
+        health.kill(w, target, "debug")
+        if target.id == w.player_id:
+            inheritance.handle_player_death(w)
+        return {"ok": True, "message": i18n.t("api.debug_kill", name=target.name), "state": snap()}
 
     @app.post("/api/legacy")
     async def do_legacy(body: LegacyBody) -> dict:
@@ -310,11 +348,12 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--dev", action="store_true", help="开放 CORS（配合 Vite dev server）")
+    parser.add_argument("--debug", action="store_true", help="调试模式：开放指名杀人等调试端点（不随 exe 打包启用）")
     parser.add_argument("--no-open", action="store_true", help="不自动打开浏览器")
     args = parser.parse_args()
 
     url = f"http://{args.host}:{args.port}"
-    app = create_app(dev=args.dev, open_browser=None if (args.dev or args.no_open) else url)
+    app = create_app(dev=args.dev, debug=args.debug, open_browser=None if (args.dev or args.no_open) else url)
     import uvicorn
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

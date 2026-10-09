@@ -60,7 +60,7 @@ def main() -> None:
         r = client.post("/api/naming", json={"child_id": entry["child_id"], "name": "测试之子"})
         assert r.status_code == 200
         res = r.json()
-        assert res["ok"] and not res["state"]["naming_queue"]
+        assert res["ok"] and all(e["child_id"] != entry["child_id"] for e in res["state"]["naming_queue"])
         child = next(c for c in res["state"]["characters"] if c["id"] == entry["child_id"])
         assert child["name"] == "测试之子"
         print("[naming] OK  命名", entry["suggested"], "-> 测试之子")
@@ -192,6 +192,50 @@ def main() -> None:
     # 世数展示抽查：display_name 字段存在
     assert all("display_name" in c for c in snap["characters"])
     print("[display_name] OK")
+
+    # ── 新生儿通用改名（不限宗族，age<1） ──
+    snap = client.get("/api/state").json()
+    newborn = next((c for c in snap["characters"] if c["alive"] and c["age"] < 1), None)
+    if newborn is None:
+        for _ in range(8):
+            s2 = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+            if s2["over"]:
+                break
+            if s2["naming_queue"]:
+                e = s2["naming_queue"][0]
+                s2 = client.post("/api/naming", json={"child_id": e["child_id"], "name": e["suggested"]}).json()["state"]
+            if s2["tutoring_queue"]:
+                e = s2["tutoring_queue"][0]
+                gid = e["guardian_candidates"][0]["id"] if e["guardian_candidates"] else None
+                s2 = client.post("/api/tutoring", json={"child_id": e["child_id"], "focus": e["suggested_focus"], "guardian_id": gid}).json()["state"]
+            if s2["trait_queue"]:
+                e = s2["trait_queue"][0]
+                s2 = client.post("/api/traitpick", json={"child_id": e["child_id"], "trait": e["options"][1]["id"]}).json()["state"]
+            snap = s2
+            newborn = next((c for c in snap["characters"] if c["alive"] and c["age"] < 1), None)
+            if newborn:
+                break
+    if newborn:
+        r = client.post("/api/rename", json={"child_id": newborn["id"], "name": "调试名"})
+        res = r.json()
+        assert res["ok"] and next(c for c in res["state"]["characters"] if c["id"] == newborn["id"])["name"] == "调试名"
+        print("[rename] OK")
+    else:
+        print("[rename] SKIP 无新生儿")
+
+    # ── 调试杀人：默认关闭 ──
+    r = client.post("/api/debug/kill", json={"target_id": 999})
+    assert r.status_code == 403
+    print("[debug kill off] OK  403 拒绝")
+
+    # ── 自杀（正常模式可用）：家主身亡 → 继承/绝嗣流程 ──
+    r = client.post("/api/suicide")
+    res = r.json()
+    assert res["ok"], res
+    dead = next(c for c in res["state"]["characters"] if c["id"] == res["state"]["player_id"] or c["death_reason"] == "suicide")
+    assert dead["death_reason"] == "suicide"
+    assert res["state"]["over"] or any(e["type"] == "succession" for e in res["state"]["events"])
+    print("[suicide] OK  继承或绝嗣已触发")
 
     print("\nWebUI 冒烟测试全部通过 ✓")
 

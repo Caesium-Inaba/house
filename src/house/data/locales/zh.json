@@ -180,5 +180,16 @@
  "api.legacy_bought": "传承已解锁（-{cost} 威名）",
  "date.label": "{year}年 {month}月 {xun}",
  "api.trait_set": "天性已定（{trait}）",
- "event.scenario_start": "弗拉季斯拉夫成为普热梅斯利德家族家主。"
+ "event.scenario_start": "弗拉季斯拉夫成为普热梅斯利德家族家主。",
+ "sexuality.heterosexual": "异性恋",
+ "sexuality.homosexual": "同性恋",
+ "sexuality.bisexual": "双性恋",
+ "sexuality.asexual": "无性恋",
+ "death.suicide": "自杀",
+ "death.debug": "调试",
+ "api.renamed": "更名「{name}」",
+ "api.suicide": "自尽身亡",
+ "api.debug_kill": "调试：已让 {name} 身亡",
+ "api.too_old_to_rename": "只能为未满周岁的新生儿改名",
+ "drawer.rename_hint": "为新生儿择名…"
 }

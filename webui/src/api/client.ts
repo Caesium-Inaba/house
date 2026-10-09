@@ -29,6 +29,9 @@ export const api = {
   tick: (unit: 'xun' | 'year'): Promise<ApiResponse> => post('/api/tick', { unit }),
   naming: (child_id: number, name: string): Promise<ApiResponse> =>
     post('/api/naming', { child_id, name }),
+  rename: (child_id: number, name: string): Promise<ApiResponse> =>
+    post('/api/rename', { child_id, name }),
+  suicide: (): Promise<ApiResponse> => post('/api/suicide'),
   candidates: (): Promise<ApiResponse> => fetch('/api/marriage/candidates').then(jf),
   marry: (target_id: number): Promise<ApiResponse> => post('/api/marriage', { target_id }),
   saves: (): Promise<ApiResponse> => fetch('/api/saves').then(jf),

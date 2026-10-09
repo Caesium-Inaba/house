@@ -41,6 +41,7 @@ class Character:
     education_score: int = 0                # 教育得分（年度判定累计）
     guardian: Optional[int] = None          # 监护人 id
     betrothed: Optional[int] = None         # 婚约对象 id
+    sexuality: str = "heterosexual"         # heterosexual/homosexual/bisexual/asexual
 
     money: float = 0.0
     prestige: float = 0.0
@@ -111,6 +112,7 @@ class Character:
             "education_score": self.education_score,
             "guardian": self.guardian,
             "betrothed": self.betrothed,
+            "sexuality": self.sexuality,
             "health": self.health,
             "money": self.money,
             "prestige": self.prestige,
@@ -146,6 +148,7 @@ class Character:
             education_score=data.get("education_score", 0),
             guardian=data.get("guardian"),
             betrothed=data.get("betrothed"),
+            sexuality=data.get("sexuality", "heterosexual"),
             health=data.get("health", 5.0),
             money=data.get("money", 0.0),
             prestige=data.get("prestige", 0.0),

@@ -137,6 +137,17 @@ def roll_potential(world: World, father: Optional[Character], mother: Optional[C
     return potential
 
 
+def roll_sexuality(world: World) -> str:
+    """按 balance 权重抽性取向（CK3 不影响生育；分布中置信度）。"""
+    x = world.rng.random()
+    acc = 0.0
+    for key, p in B.SEXUALITY_WEIGHTS:
+        acc += p
+        if x < acc:
+            return key
+    return "heterosexual"
+
+
 def create_child(
     world: World,
     father_id: Optional[int],
@@ -158,6 +169,7 @@ def create_child(
         culture = world.dynasties[dynasty].culture if dynasty in world.dynasties else "czech"
 
     gender = "male" if world.rng.random() < 0.5 else "female"
+    sexuality = roll_sexuality(world)
 
     # 同父/同母手足已用名 → 推荐名避开重名（同名者由世数后缀区分）
     used: set[str] = set()
@@ -183,7 +195,8 @@ def create_child(
         mother=mother_id,
         potential=potential,
         genes=genes,
-        traits=random_personality(world),
+        traits=set(),  # 性格由 9/12/15 岁性情抉择逐步获得（CK3：婴儿无性格特质）
+        sexuality=sexuality,
     )
     # 新生儿属性 = 潜力的一小部分 + 先天加成 + 性格加成（CK3 采录值）
     cong = T.congenital_attr_bonus(genes)
@@ -204,6 +217,26 @@ def create_child(
     if mother is not None:
         mother.children.append(child.id)
     return child
+
+
+def resolve_naming(world: World, child: Character, name: str) -> str:
+    """为新生儿正式定名（命名礼落定/超时自动落定共用）。"""
+    child.name = name
+    return name
+
+
+def add_tutoring_event(world: World, child: Character, focus: Optional[str], guardian: Optional[Character]) -> str:
+    """开蒙落定的统一事件入口（玩家落定 / 超时自动落定共用文案）。"""
+    params = {
+        "child": child.name,
+        "focus": i18n.t(f"attr.{focus}") if focus else "",
+        "guardian": guardian.name if guardian is not None else None,
+    }
+    key = "event.tutoring" if guardian is not None else "event.tutoring_no_guardian"
+    world.add_log(f"📖 {i18n.t(key, **params)}")
+    actors = [child.id] + ([guardian.id] if guardian is not None else [])
+    world.add_event("tutoring", key, params, actors)
+    return i18n.t(key, **params)
 
 
 TRAIT_PICK_AGES = (9, 12, 15)  # 性情抉择点位（CK3 童年多次性格事件，适配年龄）
@@ -228,7 +261,9 @@ def grow_children(world: World) -> None:
             world.add_log(f"🧒 {i18n.t('event.childhood_trait', **params)}")
             world.add_event("trait", "event.childhood_trait", params, [child.id])
             if world.is_descendant(child.id, world.player_id):
-                world.tutoring_queue.append({"child_id": child.id})
+                world.tutoring_queue.append(
+                    world.stamp_due({"child_id": child.id})
+                )
             else:
                 auto_tutor(world, child)
         elif child.education_focus is None:
@@ -236,7 +271,7 @@ def grow_children(world: World) -> None:
         # ── 9/12/15 岁：性情抉择（CK3 童年多次性格事件，适配点位） ──
         if age in TRAIT_PICK_AGES and not any(e.get("child_id") == child.id for e in world.trait_queue):
             if world.is_descendant(child.id, world.player_id):
-                world.trait_queue.append({"child_id": child.id, "age": age})
+                world.trait_queue.append(world.stamp_due({"child_id": child.id, "age": age}))
             else:
                 _auto_trait_pick(world, child)
         # ── 年度教育判定（CK3 生日 roll：成功 +2 分） ──
@@ -259,6 +294,7 @@ def trait_pick_options(
     """性情抉择的两个候选特质 id：(师长言传, 率性而为)。
 
     师长言传：监护人自己的性格（监护缺位则随机）；率性而为：随机、优先与既有特质成对。
+    候选一律排除自身已有特质与互斥特质（CK3 性格成对结构，矛盾性格不可共存）。
     rng 可传入独立随机源（presenter 展示用），缺省用游戏 rng（AI 决策）。
     """
     roll = rng or world.rng
@@ -267,31 +303,49 @@ def trait_pick_options(
         return "", ""
     own = set(child.traits)
 
-    def _pick(pool: list[str]) -> str:
-        free = [p for p in pool if p not in own]
-        return roll.choice(free) if free else roll.choice(pool)
+    def _pick(pool: list[str], banned: set[str]) -> str:
+        cands = [p for p in pool if p not in own and p not in banned]
+        # 候选池（如监护人的特质）全被过滤时，退到全特质池，仍排除 own 与互斥
+        cands = cands or [p for p in personality_ids if p not in own and p not in banned]
+        return roll.choice(cands) if cands else ""
+
+    def _conflicts_with(taken: set[str]) -> set[str]:
+        # 与 taken（own 或共同候选互斥）相冲的特质：其 opposites 中任一在 taken
+        return {
+            p for p in personality_ids
+            if any(o in taken for o in T.PERSONALITY.get(p, {}).get("opposites", []))
+        }
 
     guardian = world.get(child.guardian)
     if guardian is not None and guardian.traits and roll.random() < GUARDIAN_TRAIT_INFLUENCE:
-        taught = _pick(sorted(guardian.traits))
+        taught_pool = sorted(guardian.traits)
     else:
-        taught = _pick(personality_ids)
+        taught_pool = personality_ids
+    taught = _pick(taught_pool, _conflicts_with(own))
     # 率性而为：优先与自身既有特质相反的特质（CK3 性格成对结构）
     opposite_pool = [
         p for p in personality_ids
         if any(p in T.PERSONALITY.get(o, {}).get("opposites", []) for o in own)
     ]
-    stray = _pick(opposite_pool or personality_ids)
-    if stray == taught:
-        stray = _pick([p for p in personality_ids if p != taught])
+    pool = opposite_pool or personality_ids
+    stray = _pick(pool, _conflicts_with(own | {taught}))
     return taught, stray
 
 
 def apply_trait_pick(world: World, child: Character, trait_id: str) -> None:
-    """应用性情抉择结果；改特质会给监护人/家长留下压力（API 存根）。"""
+    """应用性情抉择结果；互斥性格拒绝获得（矛盾特质不可共存，CK3 成对结构）。
+
+    改特质会给监护人/家长留下压力（API 存根）。
+    """
     from . import stress
 
-    child.traits = set(child.traits) | {trait_id}
+    if trait_id not in T.PERSONALITY:
+        return
+    own = set(child.traits)
+    conflicts = any(o == trait_id or trait_id in T.PERSONALITY.get(o, {}).get("opposites", []) for o in own)
+    if conflicts or trait_id in own:
+        return
+    child.traits = own | {trait_id}
     params = {"child": child.name, "trait": T.trait_name(trait_id)}
     world.add_log(f"🌿 {i18n.t('event.trait_gain', **params)}")
     world.add_event("trait", "event.trait_gain", params, [child.id])
@@ -396,7 +450,10 @@ def finalize_education(world: World, child: Character) -> None:
     converted_note = ""
     if child.childhood_trait:
         adult_trait = T.childhood_conversion(child.childhood_trait)
-        if adult_trait and adult_trait in T.PERSONALITY and adult_trait not in child.traits:
+        conflict = adult_trait is not None and any(
+            adult_trait in T.PERSONALITY.get(o, {}).get("opposites", []) for o in child.traits
+        )  # 转换结果与抉择获得的特质互斥时放弃转换
+        if adult_trait and adult_trait in T.PERSONALITY and adult_trait not in child.traits and not conflict:
             child.traits = set(child.traits) | {adult_trait}
             converted_note = f"，童年的「{T.childhood_name(child.childhood_trait)}」化作「{T.trait_name(adult_trait)}」"
     cong = T.congenital_attr_bonus(child.genes)

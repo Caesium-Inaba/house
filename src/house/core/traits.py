@@ -184,6 +184,24 @@ def opinion_delta(a_traits: set[str], b_traits: set[str]) -> int:
     return delta // 2
 
 
+# 吸引力好感（CK3 Character#Attraction opinion 数值表采录）
+_ATTRACTION_TRAIT_VALUES: dict[str, int] = {
+    "brave": 10, "gregarious": 5, "shy": -5, "gluttonous": -5,
+    "frail": -5, "feeble": -10, "scaly": -30, "bleeder": -10, "disfigured": -20,
+    "beauty_p1": 10, "beauty_p2": 20, "beauty_p3": 30,       # Comely +10 / Beautiful +30，中间档插值
+    "physique_p1": 5, "physique_p2": 10, "physique_p3": 15,  # Hale/Robust/Herculean 为官方值
+}
+
+
+def attraction_opinion(traits: set[str], genes: dict[str, int]) -> int:
+    """对方特质带来的吸引力好感（加到观看者对对方的 opinion 上）。"""
+    total = sum(_ATTRACTION_TRAIT_VALUES.get(t, 0) for t in traits)
+    for tid, state in genes.items():
+        if state == 2:
+            total += _ATTRACTION_TRAIT_VALUES.get(tid, 0)
+    return total
+
+
 def education_attr_bonus(education: str | None) -> dict[str, int]:
     """教育特质 id 形如 edu_martial_3。"""
     bonus = {k: 0 for k in ("diplomacy", "martial", "stewardship", "intrigue", "learning", "prowess")}

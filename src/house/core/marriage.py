@@ -69,11 +69,24 @@ def candidates(world: World, char_id: int) -> list[Character]:
     return out
 
 
+def _attraction_allowed(viewer: Character) -> bool:
+    """CK3：观看者男性 >65 / 女性 >50 不受吸引；无性恋对任何人无吸引力；同性恋对异性无。"""
+    if viewer.sexuality in ("asexual", "homosexual"):
+        return False
+    if viewer.gender == "male" and viewer.age > 65:
+        return False
+    if viewer.gender == "female" and viewer.age > 50:
+        return False
+    return True
+
+
 def _apply_marriage_opinions(world: World, a: Character, b: Character) -> None:
-    """CK3 婚姻好感：基础 +30，性格矩阵修饰。"""
+    """CK3 婚姻好感：基础 +30，性格矩阵 + 吸引力好感（对象特质 → 观看者 opinion）。"""
     base = 30
-    opinion.add_opinion(a, b.id, base + T.opinion_delta(a.traits, b.traits))
-    opinion.add_opinion(b, a.id, base + T.opinion_delta(b.traits, a.traits))
+    opinion.add_opinion(a, b.id, base + T.opinion_delta(a.traits, b.traits)
+                        + (T.attraction_opinion(b.traits, b.genes) if _attraction_allowed(a) else 0))
+    opinion.add_opinion(b, a.id, base + T.opinion_delta(b.traits, a.traits)
+                        + (T.attraction_opinion(a.traits, a.genes) if _attraction_allowed(b) else 0))
 
 
 def arrange_marriage(
@@ -177,6 +190,7 @@ def ai_marriages(world: World, chance: float = 0.03) -> None:
     """NPC 自动婚配（保证家族血脉延续，避免人口雪崩）。
 
     用世界规模软上限节流：接近上限时婚配概率线性下降，达硬上限则停止。
+    性取向影响 AI 婚配意愿（CK3：同/无性恋意愿低；不影响生育，适配映射）。
     """
     alive = len(world.alive())
     if alive >= B.WORLD_HARD_CAP:
@@ -191,7 +205,7 @@ def ai_marriages(world: World, chance: float = 0.03) -> None:
     ]
     world.rng.shuffle(singles)
     for c in singles:
-        if c.spouse is not None or c.betrothed is not None or world.rng.random() > chance:
+        if c.spouse is not None or c.betrothed is not None or world.rng.random() > chance * B.SEXUALITY_AI_MARRIAGE_MULT.get(c.sexuality, 1.0):
             continue
         options = [
             o

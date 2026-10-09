@@ -115,6 +115,14 @@ EDU_NO_GUARDIAN_FAIL = 20                  # 无监护人：失败因子 +20
 
 # ── 婚姻 ────────────────────────────────────────────────
 CONSORT_LIMIT = 1                          # 眷属上限（配偶数；未来可含妾/次妻）
+# 性取向分布（CK3 不影响生育；默认分布无官方表，中置信度可调）
+SEXUALITY_WEIGHTS: list[tuple[str, float]] = [
+    ("heterosexual", 0.88), ("homosexual", 0.06), ("bisexual", 0.05), ("asexual", 0.01),
+]
+# AI 自动婚配意愿乘数（适配：CK3 中同/无性恋 AI 结婚意愿更低）
+SEXUALITY_AI_MARRIAGE_MULT: dict[str, float] = {
+    "heterosexual": 1.0, "bisexual": 1.0, "homosexual": 0.35, "asexual": 0.35,
+}
 
 # ── 资源（占位锚点，M3+ 细化） ───────────────────────────
 PRESTIGE_YEARLY_BASE = 12.0

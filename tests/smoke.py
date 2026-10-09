@@ -50,6 +50,40 @@ def test_save_load() -> None:
     print(f"[save] OK  读档后 {loaded.player.name if loaded.player else '?'}")
 
 
+def test_trait_mutex() -> None:
+    """性情抉择：候选与获得的特质不得与自身互斥（矛盾性格不可共存，CK3 成对结构）。"""
+    from house.core import genetics
+    from house.core import traits as T
+
+    for seed in range(20):
+        world = build_default_world(100 + seed)
+        player = world.player
+        # 构造已有「暴怒」的适龄孩童
+        teen = next((c for c in world.alive() if 9 <= c.age < 16), None)
+        if teen is None:
+            continue
+        teen.traits = {"wroth"}
+        for _ in range(200):
+            taught, stray = genetics.trait_pick_options(world, teen)
+            for cand in (taught, stray):
+                own = T.PERSONALITY.get(cand, {}).get("opposites", [])
+                assert cand not in teen.traits, f"{cand} 已有仍被推荐"
+                assert not (set(own) & teen.traits), f"{cand} 与自身 {teen.traits} 互斥却出现"
+            # 两候选之间也不应互斥
+            assert stray not in T.PERSONALITY.get(taught, {}).get("opposites", []), (
+                f"两候选互斥：{taught} ↔ {stray}"
+            )
+        # apply 层防御：直接注入互斥特质必须无效
+        before = set(teen.traits)
+        genetics.apply_trait_pick(world, teen, "calm")
+        assert set(teen.traits) == before, "互斥特质被强行写入"
+        # 非互斥特质可正常获得
+        genetics.apply_trait_pick(world, teen, "brave")
+        assert "brave" in teen.traits
+        break
+    print("[mutex] OK  性情抉择不产生互斥特质，apply 层防御生效")
+
+
 def test_marriage() -> None:
     world = build_default_world(3)
     player = world.player
@@ -76,10 +110,32 @@ async def test_app() -> None:
     print("[tui] OK  启动、推进、家族树、婚配页均可交互")
 
 
+def test_queue_timeout() -> None:
+    """事件队列超时：逾期条目 sweep 自动落定，未到期的保留（事件不阻塞时间）。"""
+    from house.core import queues
+
+    world = build_default_world(6)
+    victim = world.alive()[0]
+    # 已到期的命名礼 → sweep 自动落定并移除
+    entry = world.stamp_due({"child_id": victim.id, "suggested": victim.name})
+    entry["due"] = [world.date.year, world.date.month]
+    world.naming_queue.append(entry)
+    queues.sweep(world)
+    assert not world.naming_queue, "逾期命名礼未被自动落定"
+    # 未到期的 → 保留
+    entry2 = world.stamp_due({"child_id": victim.id, "suggested": "未到期者"})
+    world.naming_queue.append(entry2)
+    queues.sweep(world)
+    assert any(x.get("child_id") == victim.id for x in world.naming_queue), "未到期条目被误清"
+    print("[queue] OK  超时自动落定，未到期保留")
+
+
 def main() -> None:
     test_core()
     test_save_load()
     test_marriage()
+    test_trait_mutex()
+    test_queue_timeout()
     asyncio.run(test_app())
     print("\n全部冒烟测试通过 ✓")
 

@@ -86,6 +86,9 @@ const zh: Record<string, string> = {
   'tree.gen': '世',
   'tree.head_mark': '▲ 家主',
   // 编年史待办
+  'todo.naming_prefix': '待命名',
+  'todo.tutoring_prefix': '待开蒙',
+  'todo.traitpick_prefix': '待择性',
   'todo.naming': '待命名 · {name}（{rel}）{more} —— 点击举行命名礼',
   'todo.naming_more': ' · 另有 {n} 位',
   'todo.tutoring': '待开蒙 · {name}（{rel}）{more} —— 点击举行教养礼',
@@ -102,6 +105,10 @@ const zh: Record<string, string> = {
   'modal.back': '返回',
   'modal.shelve': '先搁置',
   'modal.close': '✕',
+  // 事件浮窗（非模态，时间不停）
+  'evwin.timeout_hint': '两个月内未处置将自动落定',
+  // 流速五档 + 暂停/开始
+  'top.speed_hint': '推进速率（5 档）· 空格 = 暂停 / 开始',
   'naming.queue_more': '尚有 {n} 位新生儿排队',
   'naming.culture_line': '{c}血脉 · {g}',
   'naming.male': '男婴',
@@ -172,6 +179,23 @@ const zh: Record<string, string> = {
   'loading': '正在翻开编年史…',
   'conn_fail': '无法连接游戏服务',
   'autoplay_hint': '自动推进（每旬稍息；遇命名或终局自动停下）',
+  // 人物抽屉
+  'drawer.pin': '标记人物（暂无效果）',
+  'drawer.close': '收起人物栏',
+  'drawer.open_marriage': '安排婚配（联姻/订婚沙龙）',
+  'drawer.liege': '领主',
+  'drawer.heir': '第一继承人',
+  'drawer.relation_to_liege': '对领主',
+  'drawer.view_tree': '查看该家族的家族树',
+  'drawer.no_dynasty': '无宗族',
+  'drawer.spouse': '配偶',
+  'drawer.relations': '关系',
+  'drawer.my_guardian': '我的监护人',
+  'drawer.my_ward': '被监护人',
+  'drawer.rename': '改名',
+  'drawer.rename_hint': '为新生儿择名…',
+  'drawer.suicide': '自尽（调试）',
+  'drawer.debug_kill': '让其身亡（--debug）',
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {

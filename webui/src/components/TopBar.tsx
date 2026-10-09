@@ -6,13 +6,18 @@ import { tickTime } from '../store'
 import { api } from '../api/client'
 import { runAction } from '../store'
 import { Crest } from '../heraldry'
+import { t } from '../i18n'
 import { IconAuto, IconPause, IconTree } from '../icons'
+
+const SPEED_MARKS = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ']
 
 export default function TopBar() {
   const snap = useStore((s) => s.snap)
   const busy = useStore((s) => s.busy)
   const auto = useStore((s) => s.auto)
   const setAuto = useStore((s) => s.setAuto)
+  const speed = useStore((s) => s.speed)
+  const setSpeed = useStore((s) => s.setSpeed)
   const openModal = useStore((s) => s.openModal)
   const setTreeOpen = useStore((s) => s.setTreeOpen)
   const treeOpen = useStore((s) => s.treeOpen)
@@ -22,7 +27,7 @@ export default function TopBar() {
 
   const player = snap.characters.find((c) => c.id === snap.player_id)
   const playerDyn = snap.dynasties.find((d) => d.id === player?.dynasty)
-  const canTick = !snap.over && snap.naming_queue.length === 0 && snap.tutoring_queue.length === 0 && snap.trait_queue.length === 0
+  const canTick = !snap.over
   const stats = snap.stats
 
   return (
@@ -67,15 +72,27 @@ export default function TopBar() {
         <button
           className={`btn toggle ${auto ? 'on' : ''}`}
           onClick={() => setAuto(!auto)}
-          disabled={!canTick && !auto}
-          title="自动推进（每旬稍息；遇命名或终局自动停下）"
+          disabled={snap.over}
+          title="自动推进 · 空格 = 暂停 / 开始（事件弹出后时间照常流动）"
         >
           {auto ? <IconPause /> : <IconAuto />}
           {auto ? '停' : '自动'}
-          <kbd>A</kbd>
+          <kbd>空格</kbd>
         </button>
+        {/* 流速五档 */}
+        <div className="speed-group" title={t('top.speed_hint')}>
+          {SPEED_MARKS.map((m, i) => (
+            <button
+              key={m}
+              className={`sbtn ${speed === i + 1 ? 'on' : ''}`}
+              onClick={() => setSpeed(i + 1)}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
         <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('xun')}>
-          推一旬 <kbd>空格</kbd>
+          推一旬
         </button>
         <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('year')}>
           推一年 <kbd>Y</kbd>

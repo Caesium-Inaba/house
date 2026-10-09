@@ -67,6 +67,7 @@ def handle_player_death(world: World) -> None:
         world.add_event("extinction", "event.extinction")
         return
     world.player_id = heir.id
+    world.head_history.append(heir.id)
     if heir.dynasty is not None and heir.dynasty in world.dynasties:
         world.dynasties[heir.dynasty].head = heir.id
     world.add_log(f"👑 {i18n.t('event.succession', heir=heir.name, age=heir.age)}")

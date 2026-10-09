@@ -9,6 +9,7 @@ from typing import Optional
 
 from .. import balance as B
 from .. import i18n
+from . import genetics
 from . import traits as T
 from .models import Character
 from .world import World
@@ -42,6 +43,7 @@ def _adult(
         money=world.rng.uniform(20, 60),
         prestige=world.rng.uniform(0, 40),
     )
+    char.sexuality = genetics.roll_sexuality(world)
     cong = T.congenital_attr_bonus(genes)
     edu = T.education_attr_bonus(education)
     pers = T.personality_attrs(char.traits)
@@ -71,6 +73,7 @@ def _child(
         health=world.rng.uniform(4.8, 5.4),
         potential={k: B.ATTR_BASE + world.rng.randint(0, 4) for k in B.ATTR_KEYS},
     )
+    char.sexuality = genetics.roll_sexuality(world)
     for k in B.ATTR_KEYS:
         char.attributes[k] = max(0, round(char.potential[k] * 0.15))
     world.add_character(char)
@@ -161,4 +164,5 @@ def build_default_world(seed: Optional[int] = None) -> World:
     world.refresh_ages()
     world.add_log(f"1066年1月 上旬：{i18n.t('event.scenario_start')}")
     world.add_event("succession", "event.scenario_start", {}, [vratislav.id])
+    world.head_history.append(vratislav.id)
     return world
