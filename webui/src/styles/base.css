@@ -43,6 +43,24 @@ body {
   background: rgba(201, 169, 97, 0.35);
 }
 
+/* 键盘焦点可见（鼠标点击不触发 outline）：金细环 */
+:focus-visible {
+  outline: 2px solid var(--gold-dim);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 系统声明减少动效时：关全部动画与过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 h1,
 h2,
 h3 {
@@ -56,6 +74,10 @@ a {
 }
 
 /* ── 滚动条：细烛芯 ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-strong) transparent;
+}
 ::-webkit-scrollbar {
   width: 9px;
   height: 9px;

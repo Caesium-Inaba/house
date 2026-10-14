@@ -81,7 +81,6 @@
   font-size: 15px;
   letter-spacing: 0.35em;
   color: var(--gold);
-  text-transform: uppercase;
 }
 
 .panel-title::before {
@@ -985,8 +984,14 @@
   border: 1px solid var(--edge-strong);
   border-radius: 12px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-  animation: modal-in 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* 高频弹出（自动档下每旬可弹）：纯淡入，不用 modal-in 的上浮过冲 */
+  animation: win-in 0.15s ease;
   overflow: hidden;
+}
+
+@keyframes win-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .event-win-head {
