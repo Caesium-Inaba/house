@@ -1,21 +1,45 @@
-"""特质库与数据加载（显示名经 i18n，本模块只管数值与结构）。"""
+"""特质库与数据加载（显示名经 i18n，本模块只管数值与结构）。
+
+数据文件叠加启用模组的覆盖（mods.data_overlays），reload_data() 负责整体重载。
+"""
 
 from __future__ import annotations
 
 import json
 import pathlib
-from functools import lru_cache
 from typing import Any
 
 from ..i18n import t as _t
 
 _DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
 
+_json_cache: dict[str, Any] = {}
 
-@lru_cache(maxsize=None)
+
 def load_json(name: str) -> Any:
-    path = _DATA_DIR / name
-    return json.loads(path.read_text(encoding="utf-8"))
+    """读取 data/<name> 并依序叠加启用模组的覆盖（越靠后越优先），结果缓存。"""
+    if name not in _json_cache:
+        path = _DATA_DIR / name
+        data = json.loads(path.read_text(encoding="utf-8"))
+        from . import mods
+
+        for overlay in mods.data_overlays(name):
+            mods.deep_merge(data, overlay)
+        _json_cache[name] = data
+    return _json_cache[name]
+
+
+def reload_data() -> None:
+    """清空数据缓存并从头重建全部模块级常量（模组激活/关闭后调用）。
+
+    全部容器原地 mutation（clear+update / 切片赋值），其它模块持有的引用保持有效。
+    语言包重载一并触发。
+    """
+    from .. import i18n
+
+    _json_cache.clear()
+    _rebuild_all()
+    i18n.reload_data()
 
 
 def _build_traits() -> dict[str, dict]:
@@ -44,13 +68,32 @@ def _build_traits() -> dict[str, dict]:
     return db
 
 
-TRAITS: dict[str, dict] = _build_traits()
-_trait_data = load_json("traits.json")
-CONGENITAL_GROUPS: dict[str, dict] = _trait_data.get("congenital_groups", {})
-PERSONALITY: dict[str, dict] = _trait_data.get("personality", {})
-EDUCATION: dict[str, Any] = _trait_data.get("education", {})
-CHILDHOOD: dict[str, dict] = _trait_data.get("childhood", {})
-PERSONALITY_IDS: list[str] = list(PERSONALITY)
+TRAITS: dict[str, dict] = {}
+CONGENITAL_GROUPS: dict[str, dict] = {}
+PERSONALITY: dict[str, dict] = {}
+EDUCATION: dict[str, Any] = {}
+CHILDHOOD: dict[str, dict] = {}
+PERSONALITY_IDS: list[str] = []
+CHILDHOOD_IDS: list[str] = []
+
+
+def _rebuild_all() -> None:
+    raw = load_json("traits.json")
+    TRAITS.clear()
+    TRAITS.update(_build_traits())
+    CONGENITAL_GROUPS.clear()
+    CONGENITAL_GROUPS.update(raw.get("congenital_groups", {}))
+    PERSONALITY.clear()
+    PERSONALITY.update(raw.get("personality", {}))
+    EDUCATION.clear()
+    EDUCATION.update(raw.get("education", {}))
+    CHILDHOOD.clear()
+    CHILDHOOD.update(raw.get("childhood", {}))
+    PERSONALITY_IDS[:] = list(PERSONALITY)
+    CHILDHOOD_IDS[:] = [k for k in CHILDHOOD if not k.startswith("_")]
+
+
+_rebuild_all()
 
 
 def _t(key: str, fallback: str) -> str:
@@ -232,8 +275,6 @@ def education_routes() -> list[str]:
 
 
 # ── 童年特质（CK3：6 岁显现，隐含推定教育方向；16 岁按 converts 表转换） ──
-
-CHILDHOOD_IDS: list[str] = [k for k in CHILDHOOD if not k.startswith("_")]
 
 
 def childhood_name(tid: str) -> str:

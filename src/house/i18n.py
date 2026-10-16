@@ -17,8 +17,20 @@ _cache: dict[str, dict[str, Any]] = {}
 def _locale(lang: str) -> dict[str, Any]:
     if lang not in _cache:
         path = _LOCALES_DIR / f"{lang}.json"
-        _cache[lang] = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        base: dict[str, Any] = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        # 模组语言包按键覆盖（启用顺序，越靠后越优先）
+        from .core import mods
+
+        for overlay in mods.locale_overlays(lang):
+            for k, v in overlay.items():
+                base[k] = v
+        _cache[lang] = base
     return _cache[lang]
+
+
+def reload_data() -> None:
+    """重读全部语言包（模组激活/关闭后由 traits.reload_data 一并触发）。"""
+    _cache.clear()
 
 
 def t(key: str, /, lang: str = "zh", **params) -> str:

@@ -158,6 +158,66 @@ def test_rename_events() -> None:
     print(f"[rename] OK  仅此人 actor 事件被同步（{old} → 试验新名）")
 
 
+def test_mods_overlay() -> None:
+    """模组覆盖：数据按键深合并、语言覆盖、关闭后回滚回原版。"""
+    import json
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from house import i18n
+    from house.core import mods as M
+    from house.core import traits as T
+
+    vanilla_loc = i18n.t("health.tier.good")
+    vanilla_traits = dict(T.TRAITS)
+    assert "intellect_p1" in T.TRAITS  # vanilla 基线
+
+    cwd = Path.cwd()
+    with tempfile.TemporaryDirectory() as td:
+        os.chdir(td)
+        trial = Path("mods/trial")
+        (trial / "data").mkdir(parents=True)
+        (trial / "localization").mkdir()
+        (trial / "mod.json").write_text(
+            json.dumps({"name": "试验模组", "version": "1.0", "tags": ["test"]}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (trial / "data" / "traits.json").write_text(
+            json.dumps({"personality": {"brave": {"money_pct": 0.9}}}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (trial / "data" / "names.json").write_text(
+            json.dumps({"cultures": {"german": {"male": ["试验男名"]}}}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (trial / "localization" / "zh.json").write_text(
+            json.dumps({"health.tier.good": "试验·尚可"}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        M.save_config(["trial"])
+        T.reload_data()
+
+        raw = T.load_json("traits.json")
+        assert raw["personality"]["brave"]["money_pct"] == 0.9, "深合并未生效"
+        assert "试验男名" in T.load_json("names.json")["cultures"]["german"]["male"]
+        assert T.TRAITS.get("brave", {}).get("money_pct") == 0.9, "TRAITS 未重载"
+        assert i18n.t("health.tier.good") == "试验·尚可", "语言覆盖未生效"
+        # launcher.json 已落盘
+        assert M.load_config()["enabled"] == ["trial"]
+
+        # 关闭 → 回滚原版
+        M.save_config([])
+        T.reload_data()
+        assert T.load_json("traits.json")["personality"]["brave"].get("money_pct") is None
+        assert i18n.t("health.tier.good") == vanilla_loc
+        assert set(T.TRAITS) == set(vanilla_traits)
+        os.chdir(cwd)  # 先离开临时目录才能清理它（Windows 不可 rmtree 当前目录）
+    # 回到真实工作目录后恢复原状（无 mods 配置）
+    T.reload_data()
+    print("[mods] OK  覆盖生效/回滚正确")
+
+
 def main() -> None:
     test_core()
     test_save_load()
@@ -165,6 +225,7 @@ def main() -> None:
     test_trait_mutex()
     test_queue_timeout()
     test_rename_events()
+    test_mods_overlay()
     asyncio.run(test_app())
     print("\n全部冒烟测试通过 ✓")
 
