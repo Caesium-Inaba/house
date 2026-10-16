@@ -412,7 +412,7 @@ def main() -> None:
     parser.add_argument("--no-open", action="store_true", help="不自动打开浏览器")
     args = parser.parse_args()
 
-    url = f"http://{args.host}:{args.port}"
+    url = f"http://{args.host}:{args.port}/#/launcher"
     app = create_app(dev=args.dev, debug=args.debug, open_browser=None if (args.dev or args.no_open) else url)
     import uvicorn
 

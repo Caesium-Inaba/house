@@ -81,7 +81,7 @@ function syncEventWins(s: Snapshot) {
   if ((s.trait_queue?.length ?? 0) === 0) st.closeEventWin('traitpick')
 }
 
-function stabiliseSnapshot(s: Snapshot): Snapshot {
+export function stabiliseSnapshot(s: Snapshot): Snapshot {
   const chars = s.characters.map((c) => {
     const prev = charCache.get(c.id)
     if (prev && shallowEq(prev, c)) return prev

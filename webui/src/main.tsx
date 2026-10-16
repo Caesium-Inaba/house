@@ -1,16 +1,23 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { HashRouter, Route, Routes } from 'react-router-dom'
 import '@fontsource/noto-serif-sc/400.css'
 import '@fontsource/noto-serif-sc/600.css'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/components.css'
 import App from './App'
+import Launcher from './components/Launcher'
 import { useStore } from './store'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <HashRouter>
+      <Routes>
+        <Route path="/launcher" element={<Launcher />} />
+        <Route path="*" element={<App />} />
+      </Routes>
+    </HashRouter>
   </StrictMode>,
 )
 

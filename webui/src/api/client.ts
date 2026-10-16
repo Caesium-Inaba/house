@@ -1,6 +1,6 @@
 /* API 客户端：所有请求都走这里 */
 
-import type { ApiResponse } from '../types'
+import type { ApiResponse, LauncherInfo } from '../types'
 
 async function jf<T = ApiResponse>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -49,4 +49,13 @@ export const api = {
   betrothal: (a_id: number, b_id: number, patrilineal: boolean): Promise<ApiResponse> =>
     post('/api/betrothal', { a_id, b_id, patrilineal }),
   legacyBuy: (tree: string): Promise<ApiResponse> => post('/api/legacy', { tree }),
+}
+
+/* ── 启动器（模组管理） ── */
+
+export const launcherApi = {
+  state: (): Promise<LauncherInfo> => fetch('/api/launcher').then((r) => jf<LauncherInfo>(r)),
+  config: (enabled: string[]): Promise<ApiResponse> => post('/api/launcher/config', { enabled }),
+  start: (enabled: string[], load: string | null): Promise<ApiResponse> =>
+    post('/api/launcher/start', { enabled, load }),
 }

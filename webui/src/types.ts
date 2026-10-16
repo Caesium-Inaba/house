@@ -219,3 +219,21 @@ export interface ApiResponse {
   own?: CharacterInfo[]
   other?: CharacterInfo[]
 }
+
+export interface LauncherModInfo {
+  folder: string
+  name: string
+  version: string
+  supported_version: string
+  tags: string[]
+  valid: boolean
+  error: string
+  order: number
+}
+
+export interface LauncherInfo {
+  ok: boolean
+  started: boolean
+  mods: LauncherModInfo[]
+  enabled: string[]
+}
