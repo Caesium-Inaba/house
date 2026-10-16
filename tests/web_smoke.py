@@ -57,13 +57,33 @@ def main() -> None:
             break
     if snap["naming_queue"]:
         entry = snap["naming_queue"][0]
+        # 改名前先抓出该婴儿的出生事件（text 里还是临时名）
+        birth = next(
+            (
+                e
+                for e in snap["events"]
+                if e["type"] == "birth" and entry["child_id"] in e["actors"]
+            ),
+            None,
+        )
         r = client.post("/api/naming", json={"child_id": entry["child_id"], "name": "测试之子"})
         assert r.status_code == 200
         res = r.json()
         assert res["ok"] and all(e["child_id"] != entry["child_id"] for e in res["state"]["naming_queue"])
         child = next(c for c in res["state"]["characters"] if c["id"] == entry["child_id"])
         assert child["name"] == "测试之子"
-        print("[naming] OK  命名", entry["suggested"], "-> 测试之子")
+        # 改名应同步历史事件：出生事件的 text 已用新名（编年史里人名可点的前提）
+        if birth is not None:
+            new_birth = next(
+                (
+                    e
+                    for e in res["state"]["events"]
+                    if e["type"] == "birth" and entry["child_id"] in e["actors"]
+                ),
+                None,
+            )
+            assert new_birth is not None and "测试之子" in new_birth["text"], new_birth
+        print("[naming] OK  命名", entry["suggested"], "-> 测试之子（出生事件已同步）")
     else:
         print("[naming] SKIP  未出现待命名（seed 相关）")
 

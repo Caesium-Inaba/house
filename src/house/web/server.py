@@ -165,7 +165,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         child = w.get(body.child_id)
         if child is None:
             raise HTTPException(400, "找不到该孩子")
-        child.name = name
+        w.rename_character(child.id, name)
         w.naming_queue.pop(idx)
         return {"ok": True, "message": i18n.t("api.named", name=name), "state": snap()}
 
@@ -259,7 +259,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         name = body.name.strip()[:12]
         if not name:
             raise HTTPException(400, "名字不能为空")
-        child.name = name
+        w.rename_character(child.id, name)
         return {"ok": True, "message": i18n.t("api.renamed", name=name), "state": snap()}
 
     @app.post("/api/suicide")

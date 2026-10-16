@@ -220,8 +220,8 @@ def create_child(
 
 
 def resolve_naming(world: World, child: Character, name: str) -> str:
-    """为新生儿正式定名（命名礼落定/超时自动落定共用）。"""
-    child.name = name
+    """为新生儿正式定名（命名礼落定/超时自动落定共用，统一走 World.rename_character）。"""
+    world.rename_character(child.id, name)
     return name
 
 

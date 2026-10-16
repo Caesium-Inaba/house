@@ -130,12 +130,41 @@ def test_queue_timeout() -> None:
     print("[queue] OK  超时自动落定，未到期保留")
 
 
+def test_rename_events() -> None:
+    """统一改名入口：只改「此人是 actor」的历史事件，他人独立事件不受影响。"""
+    world = build_default_world(9)
+    victim = world.alive()[0]
+    other = next(c for c in world.alive() if c.id != victim.id)
+    old = victim.name
+
+    world.add_event("marriage", "event.marriage", {"a": old, "b": old}, [victim.id, other.id])
+    mixed_id = len(world.events) - 1
+    world.add_event("marriage", "event.marriage", {"a": other.name}, [other.id])
+    other_only_id = len(world.events) - 1
+
+    world.rename_character(victim.id, "试验新名")
+    mixed = world.events[mixed_id]
+    # 同事件内同名字符串不可区分，两值一并替换（接受为仅视觉影响）
+    assert mixed["params"]["a"] == "试验新名" and mixed["params"]["b"] == "试验新名"
+    assert "试验新名" in mixed["text"]
+    other_only = world.events[other_only_id]
+    assert other_only["params"]["a"] == other.name, "无关事件被误改"
+    assert other.name == old or "试验新名" not in other_only.get("text", "")
+    assert victim.name == "试验新名"
+    # 不存在的 id / 空名 / 同名 → 不崩溃不变更
+    world.rename_character(99999, "x")
+    world.rename_character(victim.id, "试验新名")
+    assert victim.name == "试验新名"
+    print(f"[rename] OK  仅此人 actor 事件被同步（{old} → 试验新名）")
+
+
 def main() -> None:
     test_core()
     test_save_load()
     test_marriage()
     test_trait_mutex()
     test_queue_timeout()
+    test_rename_events()
     asyncio.run(test_app())
     print("\n全部冒烟测试通过 ✓")
 

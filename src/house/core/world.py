@@ -114,6 +114,39 @@ class World:
         ch = self.get(cid)
         return ch.name if ch else "（无）"
 
+    def rename_character(self, cid: int, new_name: str) -> None:
+        """统一改名入口：更新人物名，并同步历史事件与待命名队列。
+
+        - 历史事件只替换「此人是 actor」的条目（text 与 params 的字符串值），
+          同名他人的事件不受影响；同一事件内另一 actor 撞同一个名时字符串
+          层面不可区分，接受为仅视觉影响（同名者实际将继续共用该写法）。
+        - world.log（TUI 遗留日志）是纯字符串、无 actor 定向，不做替换；
+          玩家面向的日志是编年史（events 流），已覆盖。
+        - 待命名队列里该人的 recommended 名同步更新，防止命名礼超时落定
+          用旧推荐名把手动改名覆盖回去。
+        """
+        char = self.get(cid)
+        if char is None or not new_name:
+            return
+        old = char.name
+        if old == new_name:
+            return
+        char.name = new_name
+        for e in self.events:
+            if cid not in e.get("actors", []):
+                continue
+            params = e.get("params")
+            if isinstance(params, dict):
+                for k, v in params.items():
+                    if isinstance(v, str) and old in v:
+                        params[k] = v.replace(old, new_name)
+            text = e.get("text")
+            if isinstance(text, str) and old in text:
+                e["text"] = text.replace(old, new_name)
+        for entry in self.naming_queue:
+            if entry.get("child_id") == cid and entry.get("suggested") == old:
+                entry["suggested"] = new_name
+
     def dynasty_name_of(self, cid: Optional[int]) -> str:
         ch = self.get(cid)
         if not ch or ch.dynasty is None:
