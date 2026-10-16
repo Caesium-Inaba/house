@@ -82,6 +82,15 @@ class NewBody(BaseModel):
     seed: Optional[int] = None
 
 
+class LauncherConfigBody(BaseModel):
+    enabled: list[str] = []
+
+
+class LauncherStartBody(BaseModel):
+    enabled: list[str] = []
+    load: Optional[str] = None
+
+
 def _dist_dir() -> Optional[Path]:
     for candidate in (
         os.environ.get("HOUSE_WEBUI_DIST"),
@@ -330,6 +339,57 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         if path.is_file():
             path.unlink()
         return {"ok": True, "message": f"已删除「{name}」", "saves": _saves_payload()}
+
+    # ── 启动器（CK3 式：模组清单独立于游戏会话） ──
+
+    def launcher_started(w: World) -> bool:
+        """是否已经进入了游戏会话（启动器只在全新初始世界上出现）。"""
+        return (w.date.year, w.date.month, w.date.xun) != (1066, 1, 0) or w.over
+
+    @app.get("/api/launcher")
+    async def launcher_state() -> dict:
+        from ..core import mods as mods_core
+
+        infos = [info.__dict__ for info in mods_core.scan()]
+        enabled = mods_core.load_config()["enabled"]
+        for info in infos:
+            info["order"] = enabled.index(info["folder"]) if info["folder"] in enabled else -1
+        return {"ok": True, "started": launcher_started(world()), "mods": infos, "enabled": enabled}
+
+    @app.post("/api/launcher/config")
+    async def launcher_config(body: LauncherConfigBody) -> dict:
+        from ..core import mods as mods_core
+
+        root = mods_core.mods_root()
+        for folder in body.enabled:
+            if not (root / folder).is_dir():
+                raise HTTPException(400, f"未知模组文件夹：{folder}")
+        mods_core.save_config(body.enabled)
+        return {"ok": True, "enabled": body.enabled}
+
+    @app.post("/api/launcher/start")
+    async def launcher_start(body: LauncherStartBody) -> dict:
+        """按启用清单激活模组并开新局（或读取存档）。"""
+        from ..core import mods as mods_core
+        from ..core import traits as traits_core
+
+        root = mods_core.mods_root()
+        for folder in body.enabled:
+            if not (root / folder).is_dir():
+                raise HTTPException(400, f"未知模组文件夹：{folder}")
+        mods_core.save_config(body.enabled)
+        traits_core.reload_data()
+        if body.load:
+            path = save.save_path_for(body.load)
+            if not path.is_file():
+                raise HTTPException(404, "找不到该存档")
+            state["world"] = save.load_world(path)
+            message = f"已按所选模组读取「{body.load}」"
+        else:
+            state["world"] = build_default_world()
+            message = "已按所选模组开新局"
+        return {"ok": True, "message": message, "state": snap()}
+
 
     dist = _dist_dir()
     if dist is not None:
