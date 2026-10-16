@@ -47,6 +47,27 @@ uv run python webui.py --dev --no-open     # 后端 API，开放 CORS
 cd webui && bun run dev                    # Vite 热更，http://localhost:5173
 ```
 
+### 模组（CK3 式）
+
+模组放在与存档同级的 `mods/` 目录（exe 下即 exe 同目录），每个模组一个文件夹：
+
+```
+mods/
+  我的模组/
+    mod.json          # {"name", "version", "supported_version", "tags": [...]}
+    data/traits.json  # 可选：按键深合并进同名原版数据（数组/标量整值覆盖）
+    data/names.json   # 可选：名字池/新文化，合并语义同上
+    localization/
+      zh.json         # 可选：按 key 覆盖原版语言包
+```
+
+启用清单存在同目录的 `launcher.json`（`{"enabled": ["文件夹A", "文件夹B"]}`）。
+载入顺序＝清单顺序：**从上往下，越靠下越优先**（对齐 CK3 启动器语义）。启动器
+页面（首启自动落在那里，也可手动访问 `#/launcher`）里勾选启用、调整顺序后
+「开始游戏」；改动随时生效于下一次开局，当前对局不变。可改内容：语言包、
+特质数值（含新增特质条目）、名字池/新文化；事件与系统逻辑、`balance.py`
+数值是代码，暂不可 mod。仓库内置示例模组见 `mod/example/`。
+
 ### 测试
 
 ```bash

@@ -243,6 +243,23 @@ def main() -> None:
     else:
         print("[rename] SKIP 无新生儿")
 
+    # ── 启动器：扫描/启用清单校验/按清单开局 ──
+    r = client.get("/api/launcher")
+    assert r.status_code == 200 and r.json()["ok"]
+    print("[launcher scan] OK  已装模组", len(r.json()["mods"]), "个")
+    r = client.post("/api/launcher/config", json={"enabled": ["不存在_冒烟"]})
+    assert r.status_code == 400
+    r = client.post("/api/launcher/start", json={"enabled": []})
+    res = r.json()
+    assert res["ok"] and res["state"]["date"]["year"] == 1066
+    snap = res["state"]
+    r = client.get("/api/launcher")
+    assert r.json()["started"] is False, "新局不该被视为已开局"
+    client.post("/api/tick", json={"unit": "xun"})
+    r = client.get("/api/launcher")
+    assert r.json()["started"] is True, "推旬后应视为已开局"
+    print("[launcher start] OK  空清单开局正常，started 判定可以随进度发生")
+
     # ── 调试杀人：默认关闭 ──
     r = client.post("/api/debug/kill", json={"target_id": 999})
     assert r.status_code == 403
