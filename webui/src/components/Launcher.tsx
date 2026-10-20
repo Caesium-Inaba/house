@@ -78,6 +78,7 @@ export default function Launcher() {
         <div className="l-brand">
           <div className="l-mark">House</div>
           <div className="l-sub">{t('launcher.subtitle')}</div>
+          <div className="l-ver">v{info.game_version}</div>
         </div>
         <button className="btn primary l-play" disabled={busy} onClick={() => void play()}>
           {t('launcher.play')}

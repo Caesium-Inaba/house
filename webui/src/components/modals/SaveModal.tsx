@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useStore, runAction } from '../../store'
 import { api } from '../../api/client'
 import type { SaveInfo } from '../../types'
+import { t } from '../../i18n'
 
 function fmtTime(mtime: number): string {
   const d = new Date(mtime * 1000)
@@ -37,6 +38,34 @@ export default function SaveModal() {
   }, [modal])
 
   if (modal !== 'saves' || !snap) return null
+
+  /* 存档与当前版本/模组的差异 → 红感叹号 + 悬浮说明 */
+  function warnings(sv: SaveInfo): string | null {
+    const issues: string[] = []
+    if ((sv.version ?? 0) < snap!.meta.save_version) {
+      issues.push(t('saves.old_format'))
+    }
+    if ((sv.game_version || '') !== snap!.meta.game_version) {
+      issues.push(t('saves.version_diff', { saved: sv.game_version || '?', current: snap!.meta.game_version }))
+    }
+    const savedMods = sv.mods?.enabled ?? []
+    const curMods = snap!.meta.active_mods?.enabled ?? []
+    const missing = curMods.filter((f) => !savedMods.includes(f))
+    const extra = savedMods.filter((f) => !curMods.includes(f))
+    const versions = savedMods.filter(
+      (f) => (sv.mods?.versions ?? {})[f] !== (snap!.meta.active_mods?.versions ?? {})[f],
+    )
+    if (missing.length || extra.length || versions.length) {
+      issues.push(
+        t('saves.mods_diff', {
+          missing: missing.join(', ') || t('saves.none_label'),
+          extra: extra.join(', ') || t('saves.none_label'),
+          versions: versions.join(', ') || t('saves.none_label'),
+        }),
+      )
+    }
+    return issues.length ? issues.join('\n') : null
+  }
 
   const doSave = async (force = false) => {
     const res = await runAction(() => api.save(name, force), { silent: true })
@@ -97,6 +126,13 @@ export default function SaveModal() {
           {saves.length === 0 && <div className="empty">还没有任何存档 —— 历史正等待书写</div>}
           {saves.map((s) => (
             <div key={s.name} className="save-slot">
+              <span
+                className={`s-warn ${warnings(s) ? 'on' : ''}`}
+                title={warnings(s) ?? ''}
+                style={{ display: warnings(s) ? 'inline' : 'none' }}
+              >
+                ❗
+              </span>
               <span className="s-name">{s.name}</span>
               <span className="s-meta">
                 {s.year}年{s.month}月{s.day ?? ''}日 · {fmtTime(s.mtime)}

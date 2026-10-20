@@ -10,6 +10,7 @@ from __future__ import annotations
 import random
 from typing import Any, Optional
 
+from .. import __version__
 from .. import balance as B
 from .. import i18n
 from ..core import genetics, inheritance, legacy, marriage
@@ -480,9 +481,28 @@ def build_snapshot(world: World) -> dict:
             ],
             "consort_limit": B.CONSORT_LIMIT,
             "start_year": B.START_YEAR,
+            "game_version": __version__,
+            "save_version": _save_version(),
+            "active_mods": _active_mods(),
             "cultures": {c: i18n.t(f"culture.{c}") for c in ("czech", "polish", "hungarian", "german")},
             "gender_laws": {
                 g: i18n.t(f"gender_law.{g}") for g in ("male_preference", "equal", "female_preference")
             },
         },
+    }
+
+
+def _save_version() -> int:
+    from ..core import save as save_core
+
+    return save_core.SAVE_VERSION
+
+
+def _active_mods() -> dict:
+    """当前启用的模组与版本（存档差异徽章比对用）。"""
+    from ..core import mods as mods_core
+
+    return {
+        "enabled": mods_core.load_config()["enabled"],
+        "versions": {info.folder: info.version for info in mods_core.scan() if info.valid},
     }

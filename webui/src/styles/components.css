@@ -1251,3 +1251,11 @@
   opacity: 0.35;
   cursor: default;
 }
+
+/* 存档版本/模组差异徽章 */
+.s-warn {
+  color: var(--wax);
+  cursor: help;
+  font-size: 13px;
+  margin-right: 4px;
+}

@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from .. import __version__
 from .. import balance as B
 from .. import i18n
 from ..core import genetics, health, legacy, marriage, save, sim
@@ -339,7 +340,10 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         path = save.save_path_for(body.name)
         if not path.is_file():
             raise HTTPException(404, "找不到该存档")
-        state["world"] = save.load_world(path)
+        try:
+            state["world"] = save.load_world(path)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
         return {"ok": True, "message": f"已读取「{body.name}」", "state": snap()}
 
     @app.delete("/api/saves/{name}")
@@ -363,7 +367,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         enabled = mods_core.load_config()["enabled"]
         for info in infos:
             info["order"] = enabled.index(info["folder"]) if info["folder"] in enabled else -1
-        return {"ok": True, "started": launcher_started(world()), "mods": infos, "enabled": enabled}
+        return {"ok": True, "started": launcher_started(world()), "mods": infos, "enabled": enabled, "game_version": __version__}
 
     @app.post("/api/launcher/config")
     async def launcher_config(body: LauncherConfigBody) -> dict:
@@ -392,7 +396,10 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
             path = save.save_path_for(body.load)
             if not path.is_file():
                 raise HTTPException(404, "找不到该存档")
-            state["world"] = save.load_world(path)
+            try:
+                state["world"] = save.load_world(path)
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from exc
             message = f"已按所选模组读取「{body.load}」"
         else:
             state["world"] = build_default_world()

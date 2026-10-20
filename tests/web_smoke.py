@@ -247,6 +247,24 @@ def main() -> None:
     else:
         print("[rename] SKIP 无新生儿")
 
+    # ── 旧版本存档：直接拒绝 ──
+    import json as _json
+    import pathlib as _pl
+    _pl.Path("saves").mkdir(exist_ok=True)
+    old = _json.loads(_pl.Path("saves").glob("*.json").__iter__().__next__().read_text(encoding="utf-8")) if list(_pl.Path("saves").glob("*.json")) else None
+    # 若上面已有正常存档，复制并降级版本号；否则构造最小 v3 档
+    if old is None:
+        old = {"version": 3, "date": {"year": 1066, "month": 1, "xun": 0}, "characters": []}
+    else:
+        old = dict(old)
+        old["version"] = 3
+        old["date"] = {"year": 1066, "month": 1, "xun": 0}
+        old["save_name"] = "旧档"
+    _pl.Path("saves/旧档.json").write_text(_json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    r = client.post("/api/load", json={"name": "旧档"})
+    assert r.status_code == 400 and "旧" in r.json()["detail"], r.text
+    print("[old save] OK  旧版本存档被拒绝")
+
     # ── 启动器：扫描/启用清单校验/按清单开局 ──
     r = client.get("/api/launcher")
     assert r.status_code == 200 and r.json()["ok"]

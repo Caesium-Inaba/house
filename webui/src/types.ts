@@ -166,6 +166,9 @@ export interface PopulationInfo {
 
 export interface StatsInfo {
   start_year: number
+  game_version: string
+  save_version: number
+  active_mods: { enabled: string[]; versions: Record<string, string> }
   years_played: number
   generations: number
   births: number
@@ -178,6 +181,9 @@ export interface MetaInfo {
   health_tiers: { floor: number | null; label: string }[]
   consort_limit: number
   start_year: number
+  game_version: string
+  save_version: number
+  active_mods: { enabled: string[]; versions: Record<string, string> }
   cultures: Record<string, string>
   gender_laws: Record<string, string>
 }
@@ -242,4 +248,5 @@ export interface LauncherInfo {
   started: boolean
   mods: LauncherModInfo[]
   enabled: string[]
+  game_version: string
 }
