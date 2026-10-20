@@ -44,8 +44,7 @@ export default function SaveModal() {
     const issues: string[] = []
     if ((sv.version ?? 0) < snap!.meta.save_version) {
       issues.push(t('saves.old_format'))
-    }
-    if ((sv.game_version || '') !== snap!.meta.game_version) {
+    } else if ((sv.game_version || '') !== snap!.meta.game_version) {
       issues.push(t('saves.version_diff', { saved: sv.game_version || '?', current: snap!.meta.game_version }))
     }
     const savedMods = sv.mods?.enabled ?? []
