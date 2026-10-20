@@ -21,6 +21,8 @@ export default function TopBar() {
   const openModal = useStore((s) => s.openModal)
   const setTreeOpen = useStore((s) => s.setTreeOpen)
   const treeOpen = useStore((s) => s.treeOpen)
+  const lang = useStore((s) => s.lang)
+  const setLang = useStore((s) => s.setLang)
   const [showPlaytime, setShowPlaytime] = useState(false)
 
   if (!snap) return <header className="topbar" />
@@ -37,10 +39,9 @@ export default function TopBar() {
         <div>
           <div className="brand-name">{playerDyn?.name ?? '—'}</div>
           <div className="brand-meta">
-            家主 <b>{player?.display_name ?? player?.name ?? '—'}</b>
-            {player?.relation && player.relation !== '自己' ? '' : ''}
-            {' · '}宗族威望 <b>{Math.round(playerDyn?.renown ?? 0)}</b>
-            {snap.over ? ' · 大厦已倾' : ''}
+            {t('top.head')} <b>{player?.display_name ?? player?.name ?? '—'}</b>
+            {' · '}{t('top.renown')} <b>{Math.round(playerDyn?.renown ?? 0)}</b>
+            {snap.over ? t('top.house_fallen') : ''}
           </div>
         </div>
       </div>
@@ -48,22 +49,17 @@ export default function TopBar() {
       <div
         className="date-cartouche"
         style={{ cursor: 'pointer' }}
-        title="点击查看已游玩统计"
+        title={t('top.playtime_hint')}
         onClick={() => setShowPlaytime((v) => !v)}
       >
         <span className="orn">◆</span>
         {showPlaytime ? (
           <span className="d-sub">
-            已游玩 <b className="d-year">{stats.years_played}</b> 年 · {stats.generations} 代 ·{' '}
-            {snap.population.alive} 人在世
+            {t('top.playtime')} <b className="d-year">{stats.years_played}</b> {t('top.years')} ·{' '}
+            {stats.generations} {t('top.gen')} · {snap.population.alive} {t('top.alive')}
           </span>
         ) : (
-          <>
-            <span className="d-year">{snap.date.year}年</span>
-            <span className="d-sub">
-              {snap.date.month}月 {snap.date.day}日
-            </span>
-          </>
+          <span className="d-year">{snap.date.label}</span>
         )}
         <span className="orn">◆</span>
       </div>
@@ -73,11 +69,11 @@ export default function TopBar() {
           className={`btn toggle ${auto ? 'on' : ''}`}
           onClick={() => setAuto(!auto)}
           disabled={snap.over}
-          title="自动推进 · 空格 = 暂停 / 开始（事件弹出后时间照常流动）"
+          title={t('top.auto_hint')}
         >
           {auto ? <IconPause /> : <IconAuto />}
-          {auto ? '停' : '自动'}
-          <kbd>空格</kbd>
+          {auto ? t('top.stop') : t('top.auto')}
+          <kbd>{t('top.space')}</kbd>
         </button>
         {/* 流速五档 */}
         <div className="speed-group" title={t('top.speed_hint')}>
@@ -92,26 +88,39 @@ export default function TopBar() {
           ))}
         </div>
         <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('day')}>
-          推一日
+          {t('top.tick_day')}
         </button>
         <button className="btn" disabled={!canTick || busy} onClick={() => tickTime('month')}>
-          推一月
+          {t('top.tick_month')}
         </button>
         <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('year')}>
-          推一年 <kbd>Y</kbd>
+          {t('top.tick_year')} <kbd>Y</kbd>
         </button>
         <button
           className="btn"
           onClick={() => setTreeOpen(!treeOpen)}
-          title="家族树（全屏可缩放）"
+          title={t('top.tree_hint')}
         >
-          <IconTree /> 家族树 <kbd>T</kbd>
+          {<IconTree />} {t('top.tree')} <kbd>T</kbd>
         </button>
         <button className="btn" onClick={() => openModal('marriage')} disabled={!canTick}>
-          婚配 <kbd>M</kbd>
+          {t('top.marriage')} <kbd>M</kbd>
         </button>
         <button className="btn" onClick={() => openModal('saves')}>
-          存读档 <kbd>S</kbd>
+          {t('top.saves')} <kbd>S</kbd>
+        </button>
+        <button
+          className="btn"
+          title={t('top.lang_switch')}
+          onClick={() => {
+            const next = lang === 'zh' ? 'en' : 'zh'
+            void api.settings(next).then((res) => {
+              useStore.getState().apply(res)
+              setLang(next)
+            })
+          }}
+        >
+          {lang === 'zh' ? 'EN' : '中文'}
         </button>
       </div>
     </header>

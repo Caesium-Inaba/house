@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useStore, runAction } from '../../store'
+import { t } from '../../i18n'
 import { api } from '../../api/client'
 import type { CharacterInfo } from '../../types'
 import { Sigil } from '../../heraldry'
@@ -71,15 +72,15 @@ export default function MarriageModal() {
     <div className="veil" onClick={closeModal}>
       <div className="modal" style={{ width: 'min(720px, 94vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <span className="modal-title">婚配沙龙</span>
+          <span className="modal-title">{t('modal.marriage')}</span>
           <div style={{ display: 'flex', gap: 8, marginLeft: 14 }}>
-            <button className={`fchip ${tab === 'marriage' ? 'on' : ''}`} onClick={() => setTab('marriage')}>联姻</button>
-            <button className={`fchip ${tab === 'betrothal' ? 'on' : ''}`} onClick={() => setTab('betrothal')}>订婚</button>
+            <button className={`fchip ${tab === 'marriage' ? 'on' : ''}`} onClick={() => setTab('marriage')}>{t('marriage.tab_marriage')}</button>
+            <button className={`fchip ${tab === 'betrothal' ? 'on' : ''}`} onClick={() => setTab('betrothal')}>{t('marriage.tab_betrothal')}</button>
           </div>
           <span className="panel-sub" style={{ marginLeft: 'auto' }}>
             {tab === 'marriage'
-              ? `为 ${player?.name} 择偶 · 眷属 ${married ? 1 : 0}/${snap.meta.consort_limit}`
-              : '为自家孩童缔结婚约'}
+              ? t('marriage.for', { name: player?.name ?? '', n: married ? 1 : 0, m: snap.meta.consort_limit })
+              : t('marriage.betrothal_for')}
           </span>
           <button className="btn ghost modal-x" onClick={closeModal}>✕</button>
         </div>
@@ -89,9 +90,9 @@ export default function MarriageModal() {
             <>
               {married && (
                 <div className="empty">
-                  家主已有配偶，暂不能再婚。
+                  {t('marriage.already')}
                   <div style={{ marginTop: 6, fontSize: 12 }}>
-                    配偶：
+                    {t('marriage.spouse')}
                     <span className="link" onClick={() => { select(player!.spouse!); closeModal() }}>
                       {snap.characters.find((c) => c.id === player!.spouse)?.name}
                     </span>
@@ -100,7 +101,7 @@ export default function MarriageModal() {
               )}
               {!married && sorted == null && <div className="empty"><span className="spin" /></div>}
               {!married && sorted != null && sorted.length === 0 && (
-                <div className="empty">眼下没有合适的候选 —— 且待时日</div>
+                <div className="empty">{t('marriage.none')}</div>
               )}
               {!married &&
                 sorted?.map((c) => (
@@ -110,7 +111,7 @@ export default function MarriageModal() {
                       <div>
                         {c.name}
                         <span style={{ color: 'var(--ink-faint)', fontSize: 12 }}>
-                          {' · '}{c.culture_label} · {c.age}岁{c.relation ? ` · ${c.relation}` : ''}
+                          {' · '}{c.culture_label} · {t('dyn.age', { n: c.age })}{c.relation ? ` · ${c.relation}` : ''}
                         </span>
                       </div>
                       <div className="cand-attrs">
@@ -132,7 +133,7 @@ export default function MarriageModal() {
                       )}
                     </div>
                     <button className="btn primary" disabled={busy} style={{ padding: '5px 12px', fontSize: 12.5 }}>
-                      缔结
+                      {t('marriage.marry')}
                     </button>
                   </div>
                 ))}
@@ -142,13 +143,13 @@ export default function MarriageModal() {
           {tab === 'betrothal' && (
             <>
               <div style={{ color: 'var(--ink-faint)', fontSize: 12, marginBottom: 10 }}>
-                为自家满怀希望的孩子订下婚约；对方到 16 岁将自动成婚。母系婚姻让子女归于母亲家族。
+                {t('betrothal.hint')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <div className="divider-label" style={{ marginTop: 0 }}>自家孩童</div>
+                  <div className="divider-label" style={{ marginTop: 0 }}>{t('betrothal.own')}</div>
                   {own == null && <div className="empty"><span className="spin" /></div>}
-                  {own != null && own.length === 0 && <div className="empty">家中暂无可订婚的孩童（6-15 岁）</div>}
+                  {own != null && own.length === 0 && <div className="empty">{t('betrothal.no_own')}</div>}
                   {own?.map((c) => (
                     <div
                       key={c.id}
@@ -169,9 +170,9 @@ export default function MarriageModal() {
                   ))}
                 </div>
                 <div>
-                  <div className="divider-label" style={{ marginTop: 0 }}>心仪人家</div>
+                  <div className="divider-label" style={{ marginTop: 0 }}>{t('betrothal.other')}</div>
                   {other == null && <div className="empty"><span className="spin" /></div>}
-                  {other != null && other.length === 0 && <div className="empty">别家暂无可订婚的孩童</div>}
+                  {other != null && other.length === 0 && <div className="empty">{t('betrothal.no_other')}</div>}
                   {other?.map((c) => (
                     <div
                       key={c.id}
@@ -187,7 +188,7 @@ export default function MarriageModal() {
                       <span className="r-name">
                         {c.name}
                         <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>
-                          {' · '}{c.age}岁 · {c.culture_label}
+                          {' · '}{t('dyn.age', { n: c.age })} · {c.culture_label}
                         </span>
                       </span>
                     </div>
@@ -196,7 +197,7 @@ export default function MarriageModal() {
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, cursor: 'pointer', color: 'var(--ink-dim)', fontSize: 13 }}>
                 <input type="checkbox" checked={matrilineal} onChange={(e) => setMatrilineal(e.target.checked)} />
-                母系婚姻 —— 所生子女入母亲家族（保住血脉的关键选项）
+                {t('betrothal.matrilineal')}
               </label>
             </>
           )}
@@ -205,10 +206,10 @@ export default function MarriageModal() {
         <div className="modal-foot">
           {tab === 'marriage' && (
             <span style={{ color: 'var(--ink-faint)', fontSize: 12, marginRight: 'auto' }}>
-              排序：
-              {([['total', '综合'], ['top', '单项'], ['age', '年幼']] as const).map(([k, label]) => (
+              {t('marriage.candidate_sort')}
+              {(['total', 'top', 'age'] as const).map((k) => (
                 <button key={k} className={`fchip ${sort === k ? 'on' : ''}`} onClick={() => setSort(k)}>
-                  {label}
+                  {t(k === 'total' ? 'marriage.sort_total' : k === 'top' ? 'marriage.sort_top' : 'marriage.sort_age')}
                 </button>
               ))}
             </span>
@@ -221,11 +222,15 @@ export default function MarriageModal() {
               onClick={() => void betroth()}
             >
               {ownSel && otherSel
-                ? `缔结婚约：${ownSel.name} × ${otherSel.name}${matrilineal ? '（母系）' : ''}`
-                : '缔结婚约（选定两侧后可用）'}
+                ? t('betrothal.confirm', {
+                    a: ownSel.name,
+                    b: otherSel.name,
+                    m: matrilineal ? ` (${t('char.betrothal_line_m')})` : '',
+                  })
+                : t('betrothal.confirm_idle')}
             </button>
           )}
-          <button className="btn" onClick={closeModal}>返回</button>
+          <button className="btn" onClick={closeModal}>{t('modal.back')}</button>
         </div>
       </div>
     </div>

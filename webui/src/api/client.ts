@@ -49,6 +49,7 @@ export const api = {
   betrothal: (a_id: number, b_id: number, patrilineal: boolean): Promise<ApiResponse> =>
     post('/api/betrothal', { a_id, b_id, patrilineal }),
   legacyBuy: (tree: string): Promise<ApiResponse> => post('/api/legacy', { tree }),
+  settings: (language: 'zh' | 'en'): Promise<ApiResponse> => post('/api/settings', { language }),
 }
 
 /* ── 启动器（模组管理） ── */
@@ -56,6 +57,6 @@ export const api = {
 export const launcherApi = {
   state: (): Promise<LauncherInfo> => fetch('/api/launcher').then((r) => jf<LauncherInfo>(r)),
   config: (enabled: string[]): Promise<ApiResponse> => post('/api/launcher/config', { enabled }),
-  start: (enabled: string[], load: string | null): Promise<ApiResponse> =>
-    post('/api/launcher/start', { enabled, load }),
+  start: (enabled: string[], load: string | null, language?: 'zh' | 'en'): Promise<ApiResponse> =>
+    post('/api/launcher/start', { enabled, load, language }),
 }

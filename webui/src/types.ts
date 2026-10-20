@@ -167,6 +167,7 @@ export interface PopulationInfo {
 export interface StatsInfo {
   start_year: number
   game_version: string
+  language: 'zh' | 'en'
   save_version: number
   active_mods: { enabled: string[]; versions: Record<string, string> }
   years_played: number
@@ -182,6 +183,7 @@ export interface MetaInfo {
   consort_limit: number
   start_year: number
   game_version: string
+  language: 'zh' | 'en'
   save_version: number
   active_mods: { enabled: string[]; versions: Record<string, string> }
   cultures: Record<string, string>

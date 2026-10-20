@@ -70,20 +70,20 @@ export default function CharacterDrawer() {
 
   const suicide = async () => {
     const res = await runAction(() => api.suicide(), { silent: true })
-    if (res.ok) useStore.getState().toast(res.message ?? '自尽身亡', 'bad')
+    if (res.ok) useStore.getState().toast(res.message ?? t('api.suicide'), 'bad')
   }
   const debugKill = async () => {
     const res = await runAction(() => fetch('/api/debug/kill', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target_id: char.id }),
     }).then((r) => r.json()) as Promise<import('../types').ApiResponse>, { silent: true })
-    if (res.ok) useStore.getState().toast(res.message ?? '已身亡', 'bad')
+    if (res.ok) useStore.getState().toast(res.message ?? t('api.debug_kill', { name: char.name }), 'bad')
   }
   const rename = async () => {
     const res = await runAction(() => api.rename(char.id, renameVal), { silent: true })
     if (res.ok) {
       setRenameVal('')
-      useStore.getState().toast(res.message ?? '已更名', 'good')
+      useStore.getState().toast(res.message ?? t('api.renamed', { name: renameVal }), 'good')
     }
   }
 
@@ -209,7 +209,7 @@ export default function CharacterDrawer() {
           <span key={g.id} className={`chip ${g.polarity}`}>{g.name}</span>
         ))}
         {char.genes.filter((g) => g.state === 1).map((g) => (
-          <span key={g.id} className={`chip carrier ${g.polarity}`}>携 {g.name}</span>
+          <span key={g.id} className={`chip carrier ${g.polarity}`}>{t('drawer.carrier')} {g.name}</span>
         ))}
         {char.childhood_trait && !char.education_name && (
           <span className="chip" style={{ borderColor: 'var(--steel)', color: 'var(--steel)' }}>{char.childhood_trait.name}</span>

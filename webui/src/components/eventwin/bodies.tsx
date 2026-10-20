@@ -24,7 +24,7 @@ export function NamingBody({ shelve }: { shelve: () => void }) {
   const confirm = async () => {
     const res = await runAction(() => api.naming(entry.child_id, name), { silent: true })
     if (res.ok) {
-      useStore.getState().toast(res.message ?? '命名完成', 'good')
+      useStore.getState().toast(res.message ?? t('naming.confirm'), 'good')
       const next = useStore.getState().snap
       if (next && next.naming_queue.length > 0) setName(next.naming_queue[0].suggested)
     }
@@ -37,10 +37,10 @@ export function NamingBody({ shelve }: { shelve: () => void }) {
           <Sigil name={entry.suggested} gender={entry.gender} did={undefined} size={64} />
         </div>
         <div style={{ color: 'var(--ink-dim)', fontSize: 13 }}>
-          {entry.culture_label}血脉 · {entry.gender === 'male' ? '男婴' : '女婴'}
+          {t('naming.culture_line', { c: entry.culture_label, g: entry.gender === 'male' ? t('naming.male') : t('naming.female') })}
         </div>
         <div style={{ margin: '8px 0 20px', fontSize: 15 }}>
-          家中添了{entry.relation === '自己' ? '一位' : `一位${entry.relation}`}，请为他（她）择定终身之名。
+          {t('naming.ask', { rel: entry.relation === t('relation.self') ? '' : entry.relation })}
         </div>
         <input
           type="text"
@@ -50,7 +50,7 @@ export function NamingBody({ shelve }: { shelve: () => void }) {
           onKeyDown={(e) => e.key === 'Enter' && name.trim() && void confirm()}
           style={{ width: '100%', fontSize: 16, textAlign: 'center', letterSpacing: '0.2em', padding: '10px 12px' }}
         />
-        <div className="divider-label" style={{ justifyContent: 'center' }}>{entry.culture_label}名字池</div>
+        <div className="divider-label" style={{ justifyContent: 'center' }}>{t('naming.pool', { c: entry.culture_label })}</div>
         <div className="chips" style={{ justifyContent: 'center' }}>
           {entry.suggestions.map((n) => (
             <button
@@ -67,7 +67,7 @@ export function NamingBody({ shelve }: { shelve: () => void }) {
       <div className="modal-foot">
         <button className="btn" onClick={shelve}>{t('modal.shelve')}</button>
         <button className="btn primary" disabled={!name.trim() || busy} onClick={() => void confirm()}>
-          正式命名 <kbd>回车</kbd>
+          {t('naming.confirm')} <kbd>{t('naming.enter')}</kbd>
         </button>
       </div>
     </>
@@ -96,7 +96,7 @@ export function TutoringBody({ shelve }: { shelve: () => void }) {
       silent: true,
     })
     if (res.ok) {
-      useStore.getState().toast(res.message ?? '开蒙落定', 'good')
+      useStore.getState().toast(res.message ?? t('tutoring.confirm'), 'good')
       setFocus(null)
       setGuardianId(null)
       const next = useStore.getState().snap
@@ -135,12 +135,12 @@ export function TutoringBody({ shelve }: { shelve: () => void }) {
               {child.relation ? <span style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}> · {child.relation}</span> : null}
             </div>
             <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>
-              {child.age} 岁{child.childhood_trait ? ` · 童年特质「${child.childhood_trait.name}」` : ''}
+              {child.childhood_trait ? t('tutoring.age_trait', { age: child.age, trait: child.childhood_trait.name }) : t('dyn.age', { n: child.age })}
             </div>
           </div>
         </div>
 
-        <div className="divider-label" style={{ marginTop: 6 }}>教育方向</div>
+        <div className="divider-label" style={{ marginTop: 6 }}>{t('tutoring.focus')}</div>
         <div className="chips">
           {child.focus_options.map((o) => (
             <button
@@ -158,10 +158,10 @@ export function TutoringBody({ shelve }: { shelve: () => void }) {
           ))}
         </div>
         <div style={{ color: 'var(--ink-faint)', fontSize: 11.5, marginTop: 6 }}>
-          与童年特质匹配的教育方向更有可能成才（CK3 判定：+20 权，不匹配 −20 权）。
+          {t('tutoring.match_hint')}
         </div>
 
-        <div className="divider-label" style={{ marginTop: 14 }}>择师（监护人）</div>
+        <div className="divider-label" style={{ marginTop: 14 }}>{t('tutoring.guardian')}</div>
         {child.guardian_candidates.map((g) => (
           <div
             key={g.id}
@@ -178,20 +178,20 @@ export function TutoringBody({ shelve }: { shelve: () => void }) {
               {g.name}
               {g.suggested ? <span style={{ color: 'var(--gold)', fontSize: 11 }}> ◆推</span> : ''}
             </span>
-            <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>学识 {g.learning}</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>{t('tutoring.teacher_learning', { n: g.learning })}</span>
             <span style={{ color: 'var(--gold)', fontSize: 13 }}>
               {child.focus_options.find((o) => o.key === effectiveFocus)?.label ?? ''} {g.skill}
             </span>
           </div>
         ))}
         {child.guardian_candidates.length === 0 && (
-          <div style={{ color: 'var(--ink-faint)', fontSize: 12.5 }}>族中无可为师者 —— 无监护人将显著降低成才率。</div>
+          <div style={{ color: 'var(--ink-faint)', fontSize: 12.5 }}>{t('tutoring.no_guardian')}</div>
         )}
       </div>
       <div className="modal-foot">
         <button className="btn" onClick={shelve}>{t('modal.shelve')}</button>
         <button className="btn primary" disabled={busy || !effectiveFocus} onClick={() => void confirm()}>
-          落定教养
+          {t('tutoring.confirm')}
         </button>
       </div>
     </>
@@ -250,7 +250,7 @@ export function TraitPickBody({ shelve }: { shelve: () => void }) {
               {child.relation ? <span style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}> · {child.relation}</span> : null}
             </div>
             <div style={{ color: 'var(--ink-dim)', fontSize: 12.5 }}>
-              {child.age} 岁
+              {t('dyn.age', { n: child.age })}
               {child.guardian_name
                 ? <> · {t('traitpick.guardian_side')}：{child.guardian_name}</>
                 : ` · ${t('traitpick.no_guardian')}`}
@@ -269,7 +269,7 @@ export function TraitPickBody({ shelve }: { shelve: () => void }) {
           </div>
         )}
 
-        <div className="divider-label">择其天性</div>
+        <div className="divider-label">{t('traitpick.choose')}</div>
         <div style={{ display: 'grid', gap: 8 }}>
           {child.options.map((o) => (
             <div

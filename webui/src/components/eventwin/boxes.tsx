@@ -9,10 +9,10 @@ import { t } from '../../i18n'
 import { useStore, type EventKind } from '../../store'
 import { NamingBody, TutoringBody, TraitPickBody } from './bodies'
 
-const TITLES: Record<EventKind, string> = {
-  naming: '命名礼',
-  tutoring: '教养礼',
-  traitpick: '性情抉择',
+const TITLE_KEYS: Record<EventKind, string> = {
+  naming: 'modal.naming',
+  tutoring: 'modal.tutoring',
+  traitpick: 'modal.traitpick',
 }
 
 const WIDTHS: Record<EventKind, string> = {
@@ -57,7 +57,7 @@ export function EventWinBox({ kind, x, y, onClose, onMove }: {
         onPointerUp={() => (drag.current = null)}
         onPointerCancel={() => (drag.current = null)}
       >
-        <span className="modal-title" style={{ fontSize: 15 }}>{TITLES[kind]}</span>
+        <span className="modal-title" style={{ fontSize: 15 }}>{t(TITLE_KEYS[kind])}</span>
         <span className="event-win-hint">{t('evwin.timeout_hint', { n: daysLeft })}</span>
         <button className="btn ghost" style={{ marginLeft: 'auto', padding: '2px 8px' }} onClick={onClose}>✕</button>
       </div>

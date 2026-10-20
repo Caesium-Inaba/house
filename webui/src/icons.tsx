@@ -155,16 +155,17 @@ export const EVENT_COLORS: Record<string, string> = {
   chronicle: 'var(--ink-faint)',
 }
 
-export const EVENT_LABELS: Record<string, string> = {
-  pregnancy: '有孕',
-  birth: '诞生',
-  marriage: '联姻',
-  death: '离世',
-  succession: '继承',
-  extinction: '绝嗣',
-  adulthood: '成年',
-  tutoring: '开蒙',
-  betrothal: '婚约',
-  legacy: '传承',
-  chronicle: '记事',
-}
+/* 事件类型显示名走 i18n（event_label.*），此处只保留类型清单 */
+export const EVENT_LABEL_TYPES = [
+  'pregnancy',
+  'birth',
+  'marriage',
+  'death',
+  'succession',
+  'extinction',
+  'adulthood',
+  'tutoring',
+  'betrothal',
+  'legacy',
+  'chronicle',
+] as const

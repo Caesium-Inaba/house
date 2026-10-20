@@ -216,5 +216,9 @@
  "api.modded_load": "已按所选模组读取「{name}」",
  "api.need_debug": "需要 --debug 启动",
  "api.no_living_head": "没有在世的家主",
- "api.unknown_language": "未知语言"
+ "api.unknown_language": "未知语言",
+ "dynasty.普热梅斯利德": "普热梅斯利德",
+ "dynasty.皮亚斯特": "皮亚斯特",
+ "dynasty.阿尔帕德": "阿尔帕德",
+ "dynasty.韦尔夫": "韦尔夫"
 }

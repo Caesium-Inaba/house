@@ -73,14 +73,14 @@ export default function SaveModal() {
     if (res.exists) setOverwrite(name)
     else if (res.ok) {
       setOverwrite(null)
-      useStore.getState().toast(res.message ?? '已保存', 'good')
+      useStore.getState().toast(res.message ?? t('saves.save'), 'good')
     }
   }
 
   const doLoad = async (s: SaveInfo) => {
     const res = await runAction(() => api.load(s.name), { silent: true })
     if (res.ok) {
-      useStore.getState().toast(res.message ?? '已读取', 'good')
+      useStore.getState().toast(res.message ?? t('saves.load'), 'good')
       closeModal()
     }
   }
@@ -97,8 +97,8 @@ export default function SaveModal() {
     <div className="veil" onClick={closeModal}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <span className="modal-title">档案室</span>
-          <span className="panel-sub">当前 {snap.date.label}</span>
+          <span className="modal-title">{t('modal.saves')}</span>
+          <span className="panel-sub">{t('saves.current', { date: snap.date.label })}</span>
           <button className="btn ghost modal-x" onClick={closeModal}>✕</button>
         </div>
         <div className="modal-body">
@@ -110,20 +110,20 @@ export default function SaveModal() {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void doSave(false)}
               style={{ flex: 1 }}
-              placeholder="存档名…"
+              placeholder={t('saves.placeholder')}
             />
             {overwrite ? (
               <button className="btn danger" disabled={busy} onClick={() => void doSave(true)}>
-                覆盖「{overwrite}」
+                {t('saves.overwrite_named', { name: overwrite })}
               </button>
             ) : (
               <button className="btn primary" disabled={busy || !name.trim()} onClick={() => void doSave(false)}>
-                {fresh ? '保存' : '覆盖保存'}
+                {fresh ? t('saves.save') : t('saves.overwrite')}
               </button>
             )}
           </div>
 
-          {saves.length === 0 && <div className="empty">还没有任何存档 —— 历史正等待书写</div>}
+          {saves.length === 0 && <div className="empty">{t('saves.none')}</div>}
           {saves.map((s) => (
             <div key={s.name} className="save-slot">
               <span
@@ -135,17 +135,17 @@ export default function SaveModal() {
               </span>
               <span className="s-name">{s.name}</span>
               <span className="s-meta">
-                {s.year}年{s.month}月{s.day ?? ''}日 · {fmtTime(s.mtime)}
+                {t('saves.date', { y: s.year, m: s.month, d: s.day ?? 1 })} · {fmtTime(s.mtime)}
               </span>
               {confirmDelete === s.name ? (
                 <>
-                  <button className="btn danger" onClick={() => void doDelete(s)}>确认删除</button>
-                  <button className="btn ghost" onClick={() => setConfirmDelete(null)}>取消</button>
+                  <button className="btn danger" onClick={() => void doDelete(s)}>{t('saves.confirm_delete')}</button>
+                  <button className="btn ghost" onClick={() => setConfirmDelete(null)}>{t('saves.cancel')}</button>
                 </>
               ) : (
                 <>
-                  <button className="btn" disabled={busy} onClick={() => void doLoad(s)}>读取</button>
-                  <button className="btn ghost" title="删除" onClick={() => setConfirmDelete(s.name)}>🗑</button>
+                  <button className="btn" disabled={busy} onClick={() => void doLoad(s)}>{t('saves.load')}</button>
+                  <button className="btn ghost" title={t('saves.delete_title')} onClick={() => setConfirmDelete(s.name)}>{t('saves.delete')}</button>
                 </>
               )}
             </div>
@@ -153,9 +153,9 @@ export default function SaveModal() {
         </div>
         <div className="modal-foot">
           <button className="btn ghost" style={{ marginRight: 'auto' }} onClick={() => useStore.getState().openModal('new')}>
-            开启新篇章…
+            {t('saves.new_game')}
           </button>
-          <button className="btn" onClick={closeModal}>返回</button>
+          <button className="btn" onClick={closeModal}>{t('modal.back')}</button>
         </div>
       </div>
     </div>

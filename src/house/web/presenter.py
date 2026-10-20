@@ -293,7 +293,7 @@ def _dynasties(world: World) -> list[dict]:
         out.append(
             {
                 "id": dyn.id,
-                "name": dyn.name,
+                "name": _dynasty_label(dyn.name),
                 "culture": dyn.culture,
                 "culture_label": i18n.t(f"culture.{dyn.culture}"),
                 "head": dyn.head,
@@ -434,6 +434,15 @@ def marriage_candidate_list(world: World, char_id: int) -> list[dict]:
 
 
 
+def _dynasty_label(name: str) -> str:
+    """历史家族名有英译（如 Přemyslid）；未知家族（模组新增）回退原名。"""
+    if not name:
+        return ""
+    key = f"dynasty.{name}"
+    label = i18n.t(key)
+    return label if label != key else name
+
+
 def _join_names(value: Any) -> str:
     if not isinstance(value, list):
         return str(value)
@@ -461,6 +470,7 @@ _PARAM_TRANSLATORS = {
     "tree": lambda v: i18n.t(f"legacy.tree.{v}") if v else "",
     "education": _edu_label,
     "children": _join_names,
+    "dynasty": _dynasty_label,
 }
 
 
@@ -531,6 +541,7 @@ def build_snapshot(world: World) -> dict:
             "consort_limit": B.CONSORT_LIMIT,
             "start_year": B.START_YEAR,
             "game_version": __version__,
+            "language": i18n.current_language(),
             "save_version": _save_version(),
             "active_mods": _active_mods(),
             "cultures": {c: i18n.t(f"culture.{c}") for c in ("czech", "polish", "hungarian", "german")},

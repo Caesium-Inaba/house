@@ -5,10 +5,10 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { launcherApi } from '../api/client'
+import { api, launcherApi } from '../api/client'
 import type { LauncherInfo, LauncherModInfo } from '../types'
 import { stabiliseSnapshot, useStore } from '../store'
-import { t } from '../i18n'
+import { setLang as applyLang, t } from '../i18n'
 
 export default function Launcher() {
   const nav = useNavigate()
@@ -16,12 +16,17 @@ export default function Launcher() {
   const [enabled, setEnabled] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const lang = useStore((s) => s.lang)
+  const setLang = useStore((s) => s.setLang)
 
   useEffect(() => {
     void (async () => {
       const res = await launcherApi.state()
       setInfo(res)
       setEnabled(res.enabled)
+      const l = ((res as unknown as { language?: 'zh' | 'en' }).language) || 'zh'
+      applyLang(l)
+      useStore.setState({ lang: l })
     })()
   }, [])
 
@@ -43,6 +48,11 @@ export default function Launcher() {
       return next
     })
 
+  const switchLang = async (l: 'zh' | 'en') => {
+    const res = await api.settings(l)
+    if (res.ok) setLang(l)
+  }
+
   const play = async () => {
     if (busy) return
     if (info.started && !confirmDiscard) {
@@ -51,7 +61,7 @@ export default function Launcher() {
     }
     setBusy(true)
     try {
-      const res = await launcherApi.start(enabled, null)
+      const res = await launcherApi.start(enabled, null, lang)
       if (res.ok && res.state) {
         const snap = stabiliseSnapshot(res.state)
         useStore.setState({ snap, selectedId: snap.player_id, modal: null, eventWins: [] })
@@ -93,6 +103,23 @@ export default function Launcher() {
           </div>
         )}
         <div className="l-hint">{t('launcher.play_hint')}</div>
+        <div className="l-lang">
+          <span>{t('launcher.language')}</span>
+          <div className="l-lang-btns">
+            <button
+              className={`l-lang-btn ${lang === 'zh' ? 'on' : ''}`}
+              onClick={() => void switchLang('zh')}
+            >
+              中文
+            </button>
+            <button
+              className={`l-lang-btn ${lang === 'en' ? 'on' : ''}`}
+              onClick={() => void switchLang('en')}
+            >
+              English
+            </button>
+          </div>
+        </div>
       </aside>
       <main className="l-main">
         <header className="l-head">

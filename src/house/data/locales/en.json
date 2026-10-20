@@ -216,5 +216,9 @@
  "api.modded_load": "Loaded \"{name}\" with the selected mods",
  "api.need_debug": "Requires --debug",
  "api.no_living_head": "No living head of the family",
- "api.unknown_language": "Unknown language"
+ "api.unknown_language": "Unknown language",
+ "dynasty.普热梅斯利德": "Přemyslid",
+ "dynasty.皮亚斯特": "Piast",
+ "dynasty.阿尔帕德": "Árpád",
+ "dynasty.韦尔夫": "Welf"
 }

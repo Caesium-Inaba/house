@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import type { ApiResponse, Snapshot } from './types'
 import { api } from './api/client'
+import { setLang as applyLang, t } from './i18n'
 
 export type ModalKind = 'naming' | 'tutoring' | 'traitpick' | 'marriage' | 'saves' | 'new' | null
 
@@ -30,6 +31,7 @@ interface Store {
   busy: boolean
   auto: boolean
   speed: number
+  lang: 'zh' | 'en'
   modal: ModalKind
   eventWins: EventWin[]
   treeOpen: boolean
@@ -44,6 +46,7 @@ interface Store {
   setBusy: (b: boolean) => void
   setAuto: (a: boolean) => void
   setSpeed: (n: number) => void
+  setLang: (l: 'zh' | 'en') => void
   openModal: (m: ModalKind) => void
   closeModal: () => void
   openEventWin: (kind: EventKind) => void
@@ -113,6 +116,7 @@ export const useStore = create<Store>((set, get) => {
     busy: false,
     auto: false,
     speed: 3,
+    lang: 'zh',
     modal: null,
     eventWins: [],
     treeOpen: false,
@@ -148,6 +152,11 @@ export const useStore = create<Store>((set, get) => {
 
     setSpeed(n) {
       set({ speed: Math.max(1, Math.min(5, Math.round(n))) })
+    },
+
+    setLang(l) {
+      applyLang(l)
+      set({ lang: l })
     },
 
     openModal(m) {
@@ -202,9 +211,11 @@ export const useStore = create<Store>((set, get) => {
       try {
         const res = await api.state()
         const snap = res as unknown as Snapshot
-        set({ snap: stabiliseSnapshot(snap), selectedId: snap.player_id })
+        const lang = (snap.meta?.language as 'zh' | 'en') || 'zh'
+        applyLang(lang)
+        set({ snap: stabiliseSnapshot(snap), selectedId: snap.player_id, lang })
       } catch (e) {
-        toast(`无法连接游戏服务：${(e as Error).message}`, 'bad')
+        toast(`${t('conn_fail')}：${(e as Error).message}`, 'bad')
       } finally {
         set({ busy: false })
       }
@@ -245,7 +256,7 @@ export async function tickTime(unit: 'day' | 'month' | 'year'): Promise<void> {
     useStore.getState().closeEventWin('naming')
     useStore.getState().closeEventWin('tutoring')
     useStore.getState().closeEventWin('traitpick')
-    useStore.getState().toast(snap.over_reason || '故事终结', 'bad')
+    useStore.getState().toast(snap.over_reason || t('over.ending'), 'bad')
   } else if (snap && snap.naming_queue.length > 0) {
     useStore.getState().openEventWin('naming')
   } else if (snap && (snap.tutoring_queue.length > 0 || snap.trait_queue.length > 0)) {

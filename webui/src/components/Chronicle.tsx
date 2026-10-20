@@ -4,7 +4,7 @@ import { useMemo, useState, memo, type JSX } from 'react'
 import { useStore } from '../store'
 import type { CharacterInfo, EventInfo } from '../types'
 import { t } from '../i18n'
-import { EVENT_COLORS, EVENT_ICONS, EVENT_LABELS, IconScroll, IconCradle, IconBrush, IconSprout } from '../icons'
+import { EVENT_COLORS, EVENT_ICONS, IconScroll, IconCradle, IconBrush, IconSprout } from '../icons'
 
 const FILTER_ORDER = ['pregnancy', 'birth', 'marriage', 'betrothal', 'trait', 'adulthood', 'tutoring', 'death', 'succession', 'legacy', 'extinction', 'chronicle'] as const
 
@@ -30,7 +30,7 @@ const EventRow = memo(
 
 function dayLabel(e: EventInfo): string {
   if (e.year == null) return t('day.before')
-  return `${e.year}年${e.month != null ? ` ${e.month}月` : ''}${e.day != null ? `${e.day}日` : ''}`
+  return t('chronicle.date', { y: e.year, m: e.month ?? 1, d: e.day ?? 1 })
 }
 
 /* 事件分日渲染：actor 名字可点。人物引用由父层预取（引用稳定化后可跳过） */
@@ -119,8 +119,8 @@ export default function Chronicle() {
           </div>
           <div className="text" style={{ color: 'var(--gold-bright)' }}>
             {t('todo.naming_prefix')} · <span className="who" onClick={(ev) => { ev.stopPropagation(); select(snap.naming_queue[0].child_id); useStore.getState().setDrawerOpen(true) }}>{snap.naming_queue[0].suggested}</span>（{snap.naming_queue[0].relation}）
-            {snap.naming_queue.length > 1 ? ` · 另有 ${snap.naming_queue.length - 1} 位` : ''}
-            {' —— 点击举行命名礼'}
+            {snap.naming_queue.length > 1 ? t('todo.naming_more', { n: snap.naming_queue.length - 1 }) : ''}
+            {t('chronicle.click_naming')}
           </div>
         </div>
       )}
@@ -148,7 +148,7 @@ export default function Chronicle() {
             </span>
             （{snap.tutoring_queue[0].relation ?? ''}）
             {snap.tutoring_queue.length > 1 ? t('todo.naming_more', { n: snap.tutoring_queue.length - 1 }) : ''}
-            {' —— 点击举行教养礼'}
+            {t('chronicle.click_tutoring')}
           </div>
         </div>
       )}
@@ -176,26 +176,30 @@ export default function Chronicle() {
             </span>
             （{snap.trait_queue[0].relation ?? ''}）
             {snap.trait_queue.length > 1 ? t('todo.naming_more', { n: snap.trait_queue.length - 1 }) : ''}
-            {' —— 点击举行性情抉择'}
+            {t('chronicle.click_traitpick')}
           </div>
         </div>
       )}
 
       <div className="filter-row">
         <button className={`fchip ${filter === 'all' ? 'on' : ''}`} onClick={() => setFilter('all')}>
-          全部 <span className="n">{snap.events.length}</span>
+          {t('chronicle.all')} <span className="n">{snap.events.length}</span>
         </button>
-        {FILTER_ORDER.filter((t) => counts[t]).map((t) => {
-          const Icon = EVENT_ICONS[t] ?? IconScroll
+        {FILTER_ORDER.filter((etype) => counts[etype]).map((etype) => {
+          const Icon = EVENT_ICONS[etype] ?? IconScroll
           return (
-            <button key={t} className={`fchip ${filter === t ? 'on' : ''}`} onClick={() => setFilter(filter === t ? 'all' : t)}>
-              <Icon /> {EVENT_LABELS[t]} <span className="n">{counts[t]}</span>
+            <button
+              key={etype}
+              className={`fchip ${filter === etype ? 'on' : ''}`}
+              onClick={() => setFilter(filter === etype ? 'all' : etype)}
+            >
+              <Icon /> {t(`event_label.${etype}`)} <span className="n">{counts[etype]}</span>
             </button>
           )
         })}
         <input
           type="search"
-          placeholder="搜记事…"
+          placeholder={t('panel.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ marginLeft: 'auto', width: 140, fontSize: 12.5, padding: '4px 10px' }}
@@ -203,7 +207,7 @@ export default function Chronicle() {
       </div>
 
       <div className="panel-body">
-        {shown.length === 0 && <div className="empty">尚无大事发生</div>}
+        {shown.length === 0 && <div className="empty">{t('chronicle.empty')}</div>}
         <div className="chronicle">
           {shown.map(({ e, head }) => (
             <EventRow

@@ -19,6 +19,7 @@ export default function App() {
   const busy = useStore((s) => s.busy)
   const auto = useStore((s) => s.auto)
   const speed = useStore((s) => s.speed)
+  const lang = useStore((s) => s.lang)
 
   useEffect(() => {
     void useStore.getState().boot()
@@ -80,7 +81,7 @@ export default function App() {
 
   if (!snap) {
     return (
-      <div className="app">
+      <div className="app" data-lang={lang}>
         <div className="empty" style={{ margin: 'auto' }}>
           {busy ? '正在翻开编年史…' : '无法连接游戏服务'}
         </div>
@@ -90,7 +91,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" data-lang={lang}>
       <TopBar />
       <main className="columns">
         {/* 人物栏预留空位：无论抽屉是否呼出，中/右两栏永不位移 */}

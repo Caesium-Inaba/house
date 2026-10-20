@@ -194,7 +194,7 @@ export default function FamilyTree() {
                     {truncate(shownName, 5)}
                   </text>
                   <text x={n.w - 10} y={40} textAnchor="end" fontSize="11.5" fill={n.char.alive ? 'var(--ink-dim)' : '#8a6a55'}>
-                    {n.char.alive ? `${n.char.age} 岁` : `†${n.char.death_year} ${n.char.death_reason_label ?? ''}`}
+                    {n.char.alive ? t('tree.age', { n: n.char.age }) : t('tree.death', { y: n.char.death_year ?? '', r: n.char.death_reason_label ?? '' })}
                   </text>
                   {isPlayer && (
                     <text x={n.w / 2} y={NODE_H + 15} textAnchor="middle" fontSize="11" fill="var(--gold)" letterSpacing="3">
