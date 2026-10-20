@@ -116,10 +116,11 @@ def buy(world: World, dynasty_id: int, tree: str) -> tuple[bool, str]:
     dyn.renown -= cost
     dyn.legacies[tree] = level_of(dyn, tree) + 1
     params = {
-        "tree": i18n.t(f"legacy.tree.{tree}"),
+        "tree": tree,
         "level": dyn.legacies[tree],
         "cost": cost,
     }
-    world.add_log(f"✦ {i18n.t('event.legacy', **params)}")
+    log_params = dict(params, tree=i18n.t(f"legacy.tree.{tree}"))
+    world.add_log(f"✦ {i18n.t('event.legacy', **log_params)}")
     world.add_event("legacy", "event.legacy", params, [dyn.head] if dyn.head else [])
     return True, i18n.t("api.legacy_bought", cost=cost)

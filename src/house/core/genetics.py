@@ -231,7 +231,7 @@ def add_tutoring_event(world: World, child: Character, focus: Optional[str], gua
     """开蒙落定的统一事件入口（玩家落定 / 超时自动落定共用文案）。"""
     params = {
         "child": child.name,
-        "focus": i18n.t(f"attr.{focus}") if focus else "",
+        "focus": focus or "",
         "guardian": guardian.name if guardian is not None else None,
     }
     key = "event.tutoring" if guardian is not None else "event.tutoring_no_guardian"
@@ -258,7 +258,7 @@ def annual_growth(world: World, child: Character) -> None:
     if child.childhood_trait is None:
         T.roll_childhood_trait(world, child)
         child.education_focus = T.childhood_focus(child.childhood_trait)  # CK3 默认推定
-        params = {"child": child.name, "trait": T.childhood_name(child.childhood_trait)}
+        params = {"child": child.name, "trait": child.childhood_trait}
         world.add_log(f"🧒 {i18n.t('event.childhood_trait', **params)}")
         world.add_event("trait", "event.childhood_trait", params, [child.id])
         if world.is_descendant(child.id, world.player_id):
@@ -347,7 +347,7 @@ def apply_trait_pick(world: World, child: Character, trait_id: str) -> None:
     if conflicts or trait_id in own:
         return
     child.traits = own | {trait_id}
-    params = {"child": child.name, "trait": T.trait_name(trait_id)}
+    params = {"child": child.name, "trait": trait_id}
     world.add_log(f"🌿 {i18n.t('event.trait_gain', **params)}")
     world.add_event("trait", "event.trait_gain", params, [child.id])
     # 压力钩子（未实现的状态层；落地时 Character.stress 由该入口累积）
@@ -469,7 +469,7 @@ def finalize_education(world: World, child: Character) -> None:
     )
     world.add_event(
         "adulthood", "event.adulthood",
-        {"child": child.name, "education": T.education_name(child.education), "score": score},
+        {"child": child.name, "education": child.education, "score": score},
         [child.id],
     )
 

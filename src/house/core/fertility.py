@@ -143,8 +143,8 @@ def childbirth(world: World, mother: Character) -> None:
         kids.append(genetics.create_child(world, father_id, mother.id, mother.patrilineal))
         mother.children_born += 1
 
-    names = "、".join(k.name for k in kids)
-    world.add_log(f"👶 {i18n.t('event.birth', mother=mother.name, children=names)}")
+    names = [k.name for k in kids]
+    world.add_log(f"👶 {i18n.t('event.birth', mother=mother.name, children="、".join(names))}")
     world.add_event(
         "birth", "event.birth",
         {"mother": mother.name, "children": names},

@@ -433,6 +433,49 @@ def marriage_candidate_list(world: World, char_id: int) -> list[dict]:
     return out
 
 
+
+def _join_names(value: Any) -> str:
+    if not isinstance(value, list):
+        return str(value)
+    sep = "、" if i18n.current_language() == "zh" else ", "
+    return sep.join(str(v) for v in value)
+
+
+def _edu_label(value: Any) -> str:
+    """教育特质 id（edu_route_level）→ 当前语言全名。"""
+    v = str(value or "")
+    if not v.startswith("edu_"):
+        return v
+    parts = v.split("_")
+    if len(parts) != 3:
+        return v
+    return i18n.t(f"edu.{parts[1]}.{parts[2]}")
+
+
+# 事件参数里的「原始值」按语言二次翻译（birth 的孩子名列表也在这里拼接）
+_PARAM_TRANSLATORS = {
+    "reason": lambda v: i18n.t(f"death.{v}") if i18n.t(f"death.{v}") != f"death.{v}" else str(v),
+    "focus": lambda v: i18n.t(f"attr.{v}") if v else "",
+    "trait": lambda v: i18n.t(f"trait.{v}"),
+    "line": lambda v: i18n.t(f"line.{v}"),
+    "tree": lambda v: i18n.t(f"legacy.tree.{v}") if v else "",
+    "education": _edu_label,
+    "children": _join_names,
+}
+
+
+def _event_text(event: dict) -> str:
+    """按当前语言用 key+params 重渲染事件文本（params 存结构化原值）。"""
+    key = event.get("key")
+    if not key:
+        return event.get("text", "")
+    params = dict(event.get("params") or {})
+    for k, translator in _PARAM_TRANSLATORS.items():
+        if k in params:
+            params[k] = translator(params[k])
+    return i18n.t(key, **params)
+
+
 def build_snapshot(world: World) -> dict:
     player = world.player
     alive = world.alive()
@@ -444,16 +487,22 @@ def build_snapshot(world: World) -> dict:
             "month": date.month,
             "day": date.day,
             "ordinal": date.ordinal(),
-            "label": i18n.t("date.label", year=date.year, month=date.month, day=date.day),
+            "label": i18n.t(
+                "date.label",
+                year=date.year,
+                month=date.month,
+                month_name=i18n.t(f"month.{date.month}"),
+                day=date.day,
+            ),
         },
         "player_id": world.player_id,
         "over": world.over,
-        "over_reason": world.over_reason,
+        "over_reason": i18n.t(world.over_reason) if world.over_reason else "",
         "gender_law": world.gender_law,
         "gender_law_label": i18n.t(f"gender_law.{world.gender_law}"),
         "characters": [enrich_character(world, c, player) for c in world.characters.values()],
         "dynasties": _dynasties(world),
-        "events": list(world.events),
+        "events": [dict(e, text=_event_text(e)) for e in world.events],
         "naming_queue": _naming_entries(world),
         "tutoring_queue": _tutoring_entries(world),
         "trait_queue": _traitpick_entries(world),

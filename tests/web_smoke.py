@@ -33,7 +33,18 @@ def main() -> None:
     assert any(e["type"] == "succession" for e in snap["events"])
     print("[state] OK  在世", snap["population"]["alive"], "人")
 
-    # ── 推旬 ──
+    # ── 语言切换：快照与历史事件全量重渲染 ──
+    r = client.post("/api/settings", json={"language": "en"})
+    res = r.json()
+    assert res["ok"] and res["restart_required"] is False
+    en_label = res["state"]["date"]["label"]
+    assert "1966" not in en_label and ("January" in en_label or en_label.endswith("1066")), en_label
+    assert any("Vratislaus becomes" in e["text"] for e in res["state"]["events"]), res["state"]["events"][:2]
+    r = client.post("/api/settings", json={"language": "zh"})
+    assert any("弗拉季斯拉夫成为" in e["text"] for e in r.json()["state"]["events"])
+    print("[i18n] OK  快照与历史事件随语言切换")
+
+    # ── 推一日 ──
     before = snap["date"]
     r = client.post("/api/tick", json={"unit": "day"})
     assert r.status_code == 200

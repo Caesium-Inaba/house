@@ -62,7 +62,7 @@ def handle_player_death(world: World) -> None:
     heir = find_heir(world, player)
     if heir is None:
         world.over = True
-        world.over_reason = "家族绝嗣，无人继承"
+        world.over_reason = "over.no_heir"
         world.add_log(f"☠ {i18n.t('event.extinction')}")
         world.add_event("extinction", "event.extinction")
         return

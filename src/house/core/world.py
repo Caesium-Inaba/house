@@ -139,6 +139,12 @@ class World:
                 for k, v in params.items():
                     if isinstance(v, str) and old in v:
                         params[k] = v.replace(old, new_name)
+                    elif isinstance(v, list):
+                        # 名字列表（如 birth 的 children）逐项替换
+                        params[k] = [
+                            item.replace(old, new_name) if isinstance(item, str) else item
+                            for item in v
+                        ]
             text = e.get("text")
             if isinstance(text, str) and old in text:
                 e["text"] = text.replace(old, new_name)

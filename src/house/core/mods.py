@@ -49,22 +49,29 @@ def config_path(base: pathlib.Path | None = None) -> pathlib.Path:
     return pathlib.Path.cwd() / CONFIG_NAME
 
 
-def load_config(base: pathlib.Path | None = None) -> dict[str, list[str]]:
-    """读取 launcher.json；缺失/坏档按空清单处理。"""
+def load_config(base: pathlib.Path | None = None) -> dict:
+    """读取 launcher.json；缺失/坏档按默认值处理。"""
     path = config_path(base)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and isinstance(data.get("enabled"), list):
-            return {"enabled": [str(x) for x in data["enabled"]]}
+        if isinstance(data, dict):
+            enabled = data.get("enabled")
+            language = data.get("language")
+            return {
+                "enabled": [str(x) for x in enabled] if isinstance(enabled, list) else [],
+                "language": language if language in ("zh", "en") else "zh",
+            }
     except (OSError, ValueError):
         pass
-    return {"enabled": []}
+    return {"enabled": [], "language": "zh"}
 
 
-def save_config(enabled: list[str], base: pathlib.Path | None = None) -> None:
+def save_config(enabled: list[str], language: str | None = None, base: pathlib.Path | None = None) -> None:
+    current = load_config(base)
+    lang = language if language in ("zh", "en") else current["language"]
     path = config_path(base)
     path.write_text(
-        json.dumps({"enabled": [str(x) for x in enabled]}, ensure_ascii=False, indent=2),
+        json.dumps({"enabled": [str(x) for x in enabled], "language": lang}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 

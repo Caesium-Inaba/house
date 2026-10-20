@@ -44,7 +44,7 @@ def kill(world: World, char: Character, reason: str) -> None:
     label = death_reason_label(reason)
     world.add_log(f"⚰ {i18n.t('event.death', name=char.name, age=char.age, reason=label)}")
     world.add_event(
-        "death", "event.death", {"name": char.name, "age": char.age, "reason": label}, [char.id]
+        "death", "event.death", {"name": char.name, "age": char.age, "reason": reason}, [char.id]
     )
 
 

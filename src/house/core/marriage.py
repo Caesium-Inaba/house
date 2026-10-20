@@ -133,11 +133,12 @@ def arrange_betrothal(
     a.betrothed, b.betrothed = b.id, a.id
     opinion.add_opinion(a, b.id, 10)
     opinion.add_opinion(b, a.id, 10)
-    line_label = i18n.t("line.matrilineal") if not patrilineal else i18n.t("line.patrilineal")
+    line_key = "matrilineal" if not patrilineal else "patrilineal"
+    line_label = i18n.t(f"line.{line_key}")
     world.add_log(f"💍 {i18n.t('event.betrothal', a=a.name, b=b.name, line=line_label)}")
     world.add_event(
         "betrothal", "event.betrothal",
-        {"a": a.name, "b": b.name, "line": line_label}, [a.id, b.id],
+        {"a": a.name, "b": b.name, "line": line_key}, [a.id, b.id],
     )
     return True
 

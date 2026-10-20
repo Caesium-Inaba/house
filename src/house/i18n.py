@@ -12,6 +12,17 @@ from typing import Any
 
 _LOCALES_DIR = pathlib.Path(__file__).resolve().parent / "data" / "locales"
 _cache: dict[str, dict[str, Any]] = {}
+_current_lang = "zh"
+
+
+def set_language(lang: str) -> None:
+    """设置全局展示语言（单机服务器单会话，快照渲染前统一设置）。"""
+    global _current_lang
+    _current_lang = lang if lang in ("zh", "en") else "zh"
+
+
+def current_language() -> str:
+    return _current_lang
 
 
 def _locale(lang: str) -> dict[str, Any]:
@@ -33,9 +44,9 @@ def reload_data() -> None:
     _cache.clear()
 
 
-def t(key: str, /, lang: str = "zh", **params) -> str:
-    """翻译键 —— 模板用 {name} 之类的占位符。"""
-    table = _locale(lang)
+def t(key: str, /, lang: str | None = None, **params) -> str:
+    """翻译键 —— 模板用 {name} 之类的占位符；语言缺省用全局设置。"""
+    table = _locale(lang or _current_lang)
     template = table.get(key)
     if template is None:
         return key

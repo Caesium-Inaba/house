@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from .. import __version__
 from .. import balance as B
 from .. import i18n
-from ..core import genetics, health, legacy, marriage, save, sim
+from ..core import genetics, health, legacy, marriage, mods as mods_core, save, sim
 from ..core import traits as T
 from ..core.scenario import build_default_world
 from ..core.time import Date, is_leap, month_days
@@ -84,11 +84,17 @@ class NewBody(BaseModel):
 
 class LauncherConfigBody(BaseModel):
     enabled: list[str] = []
+    language: Optional[str] = None
 
 
 class LauncherStartBody(BaseModel):
     enabled: list[str] = []
     load: Optional[str] = None
+    language: Optional[str] = None
+
+
+class SettingsBody(BaseModel):
+    language: Optional[str] = None
 
 
 def _dist_dir() -> Optional[Path]:
@@ -127,7 +133,12 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
             allow_headers=["*"],
         )
 
-    state: dict = {"world": None, "debug": debug}
+    state: dict = {"world": None, "debug": debug, "lang": mods_core.load_config()["language"]}
+
+    @app.middleware("http")
+    async def _language_middleware(request, call_next):
+        i18n.set_language(state.get("lang", "zh"))
+        return await call_next(request)
 
     def world() -> World:
         if state["world"] is None:
@@ -177,13 +188,13 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
             (i for i, e in enumerate(w.naming_queue) if e.get("child_id") == body.child_id), None
         )
         if idx is None:
-            raise HTTPException(400, "该孩子不在待命名队列中")
+            raise HTTPException(400, i18n.t("api.not_in_naming"))
         name = body.name.strip()[:12]
         if not name:
-            raise HTTPException(400, "名字不能为空")
+            raise HTTPException(400, i18n.t("api.name_empty"))
         child = w.get(body.child_id)
         if child is None:
-            raise HTTPException(400, "找不到该孩子")
+            raise HTTPException(400, i18n.t("api.invalid_child"))
         w.rename_character(child.id, name)
         w.naming_queue.pop(idx)
         return {"ok": True, "message": i18n.t("api.named", name=name), "state": snap()}
@@ -234,14 +245,14 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         w = world()
         child = w.get(body.child_id)
         if child is None:
-            raise HTTPException(400, "找不到该孩子")
+            raise HTTPException(400, i18n.t("api.invalid_child"))
         idx = next(
             (i for i, e in enumerate(w.tutoring_queue) if e.get("child_id") == body.child_id), None
         )
         if idx is None:
-            raise HTTPException(400, "该孩子不在教养队列中")
+            raise HTTPException(400, i18n.t("api.not_in_tutoring"))
         if body.focus not in B.ATTRS:
-            raise HTTPException(400, "未知的教育方向")
+            raise HTTPException(400, i18n.t("api.unknown_focus"))
         guardian = w.get(body.guardian_id)
         child.education_focus = body.focus
         child.guardian = guardian.id if guardian is not None else None
@@ -254,14 +265,14 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         w = world()
         child = w.get(body.child_id)
         if child is None:
-            raise HTTPException(400, "找不到该孩子")
+            raise HTTPException(400, i18n.t("api.invalid_child"))
         idx = next(
             (i for i, e in enumerate(w.trait_queue) if e.get("child_id") == body.child_id), None
         )
         if idx is None:
-            raise HTTPException(400, "该孩子不在性情抉择队列中")
+            raise HTTPException(400, i18n.t("api.not_in_traitpick"))
         if body.trait not in T.PERSONALITY:
-            raise HTTPException(400, "未知的性格特质")
+            raise HTTPException(400, i18n.t("api.unknown_trait"))
         genetics.apply_trait_pick(w, child, body.trait)
         w.trait_queue.pop(idx)
         return {"ok": True, "message": i18n.t("api.trait_set", trait=T.trait_name(body.trait)), "state": snap()}
@@ -272,12 +283,12 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         w = world()
         child = w.get(body.child_id)
         if child is None:
-            raise HTTPException(400, "找不到该人物")
+            raise HTTPException(400, i18n.t("api.no_such_person"))
         if not child.is_alive or child.age >= 1:
             raise HTTPException(400, i18n.t("api.too_old_to_rename"))
         name = body.name.strip()[:12]
         if not name:
-            raise HTTPException(400, "名字不能为空")
+            raise HTTPException(400, i18n.t("api.name_empty"))
         w.rename_character(child.id, name)
         return {"ok": True, "message": i18n.t("api.renamed", name=name), "state": snap()}
 
@@ -287,7 +298,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         w = world()
         player = w.player
         if player is None or not player.is_alive or w.over:
-            return {"ok": False, "message": "没有在世的家主", "state": snap()}
+            return {"ok": False, "message": i18n.t("api.no_living_head"), "state": snap()}
         from ..core import inheritance
 
         health.kill(w, player, "suicide")
@@ -298,7 +309,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
     async def debug_kill(body: MarriageBody) -> dict:
         """仅 --debug 模式：指名杀人，死因=调试。"""
         if not state.get("debug"):
-            raise HTTPException(403, "需要 --debug 启动")
+            raise HTTPException(403, i18n.t("api.need_debug"))
         w = world()
         target = w.get(body.target_id)
         if target is None or not target.is_alive:
@@ -328,36 +339,47 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         if save.save_exists(name) and not body.overwrite:
             return {
                 "ok": False,
-                "message": "同名存档已存在",
+                "message": i18n.t("api.save_exists"),
                 "exists": True,
                 "saves": _saves_payload(),
             }
         save.save_named(world(), name)
-        return {"ok": True, "message": f"已保存「{name}」", "saves": _saves_payload()}
+        return {"ok": True, "message": i18n.t("ui.saved", name=name), "saves": _saves_payload()}
 
     @app.post("/api/load")
     async def do_load(body: LoadBody) -> dict:
         path = save.save_path_for(body.name)
         if not path.is_file():
-            raise HTTPException(404, "找不到该存档")
+            raise HTTPException(404, i18n.t("api.not_found"))
         try:
             state["world"] = save.load_world(path)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
-        return {"ok": True, "message": f"已读取「{body.name}」", "state": snap()}
+        return {"ok": True, "message": i18n.t("api.loaded", name=body.name), "state": snap()}
 
     @app.delete("/api/saves/{name}")
     async def delete_save(name: str) -> dict:
         path = save.save_path_for(name)
         if path.is_file():
             path.unlink()
-        return {"ok": True, "message": f"已删除「{name}」", "saves": _saves_payload()}
+        return {"ok": True, "message": i18n.t("api.save_deleted", name=name), "saves": _saves_payload()}
 
     # ── 启动器（CK3 式：模组清单独立于游戏会话） ──
 
     def launcher_started(w: World) -> bool:
         """是否已经进入了游戏会话（启动器只在全新初始世界上出现）。"""
         return (w.date.year, w.date.month, w.date.day) != (1066, 1, 1) or w.over
+
+    @app.post("/api/settings")
+    async def update_settings(body: SettingsBody) -> dict:
+        """切换展示语言（现阶段立即全量重渲染；restart_required 为将来的重启式切换预留）。"""
+        if body.language is not None:
+            if body.language not in ("zh", "en"):
+                raise HTTPException(400, i18n.t("api.unknown_language"))
+            state["lang"] = body.language
+            mods_core.save_config(mods_core.load_config()["enabled"], language=body.language)
+        i18n.set_language(state["lang"])
+        return {"ok": True, "message": None, "restart_required": False, "state": snap()}
 
     @app.get("/api/launcher")
     async def launcher_state() -> dict:
@@ -367,7 +389,14 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         enabled = mods_core.load_config()["enabled"]
         for info in infos:
             info["order"] = enabled.index(info["folder"]) if info["folder"] in enabled else -1
-        return {"ok": True, "started": launcher_started(world()), "mods": infos, "enabled": enabled, "game_version": __version__}
+        return {
+            "ok": True,
+            "started": launcher_started(world()),
+            "mods": infos,
+            "enabled": enabled,
+            "language": state["lang"],
+            "game_version": __version__,
+        }
 
     @app.post("/api/launcher/config")
     async def launcher_config(body: LauncherConfigBody) -> dict:
@@ -376,8 +405,10 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         root = mods_core.mods_root()
         for folder in body.enabled:
             if not (root / folder).is_dir():
-                raise HTTPException(400, f"未知模组文件夹：{folder}")
-        mods_core.save_config(body.enabled)
+                raise HTTPException(400, i18n.t("api.unknown_mod", folder=folder))
+        mods_core.save_config(body.enabled, language=body.language)
+        if body.language is not None:
+            state["lang"] = body.language
         return {"ok": True, "enabled": body.enabled}
 
     @app.post("/api/launcher/start")
@@ -389,21 +420,23 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         root = mods_core.mods_root()
         for folder in body.enabled:
             if not (root / folder).is_dir():
-                raise HTTPException(400, f"未知模组文件夹：{folder}")
-        mods_core.save_config(body.enabled)
+                raise HTTPException(400, i18n.t("api.unknown_mod", folder=folder))
+        mods_core.save_config(body.enabled, language=body.language)
+        if body.language is not None:
+            state["lang"] = body.language
         traits_core.reload_data()
         if body.load:
             path = save.save_path_for(body.load)
             if not path.is_file():
-                raise HTTPException(404, "找不到该存档")
+                raise HTTPException(404, i18n.t("api.not_found"))
             try:
                 state["world"] = save.load_world(path)
             except ValueError as exc:
                 raise HTTPException(400, str(exc)) from exc
-            message = f"已按所选模组读取「{body.load}」"
+            message = i18n.t("api.modded_load", name=body.load)
         else:
             state["world"] = build_default_world()
-            message = "已按所选模组开新局"
+            message = i18n.t("api.modded_new_game")
         return {"ok": True, "message": message, "state": snap()}
 
 
