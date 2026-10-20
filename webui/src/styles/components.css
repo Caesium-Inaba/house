@@ -246,9 +246,21 @@
 
 .btn-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* 顶栏按钮在窄宽度下进一步压缩，避免溢出 */
+.topbar .btn {
+  padding: 4px 9px;
+  letter-spacing: 0.04em;
+}
+
+.topbar .btn kbd {
+  display: none;
 }
 
 /* 自动推进开关 */
@@ -704,7 +716,7 @@
 .gameover-veil {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 30;
   background:
     radial-gradient(900px 640px at 50% 30%, rgba(158, 43, 37, 0.16), transparent 65%),
     rgba(8, 5, 3, 0.9);

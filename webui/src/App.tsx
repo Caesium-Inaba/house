@@ -106,13 +106,13 @@ export default function App() {
 
       {snap.over && <GameOver />}
 
-      <CharacterDrawer />
+      {!snap.over && <CharacterDrawer />}
 
       <FamilyTree />
       {/* 备份（旧行为）：事件原本用阻塞式 modal 弹出（见 modals/NamingModal 等），
           现由 EventWindows 浮窗承担——事件弹出后时间照常流动。
           modal 组件保留在 modals/ 下作为备份，需要恢复阻塞式时在此挂回。 */}
-      <EventWindows />
+      {!snap.over && <EventWindows />}
       <MarriageModal />
       <SaveModal />
       <NewGameModal />
