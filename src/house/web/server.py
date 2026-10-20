@@ -25,6 +25,7 @@ from .. import i18n
 from ..core import genetics, health, legacy, marriage, save, sim
 from ..core import traits as T
 from ..core.scenario import build_default_world
+from ..core.time import Date, is_leap, month_days
 from ..core.world import World
 from .presenter import (
     betrothal_pools_payload,
@@ -32,11 +33,9 @@ from .presenter import (
     marriage_candidate_list,
 )
 
-XUNS_PER_YEAR = 3 * 12
-
 
 class TickBody(BaseModel):
-    unit: str = "xun"  # xun / year
+    unit: str = "day"  # day / month / year
 
 
 class NamingBody(BaseModel):
@@ -152,12 +151,22 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
     async def tick(body: TickBody) -> dict:
         w = world()
         if not w.over:
+            cur = w.date
             if body.unit == "year":
+                # 精确推一年：落到明年的今天（2/29 遇平年退到 2/28）
+                ny, nm, nd = cur.year + 1, cur.month, cur.day
+                if nm == 2 and nd == 29 and not is_leap(ny):
+                    nd = 28
+                target = Date(ny, nm, nd)
                 # 备份（旧行为）：stop_on_naming=True = 事件弹出即停（阻塞时间）。
                 # 事件窗口化后事件不再阻塞推进；恢复阻塞式改回 True 即可。
-                sim.advance(w, XUNS_PER_YEAR, stop_on_naming=False)
+                sim.advance(w, target.ordinal() - cur.ordinal(), stop_on_naming=False)
+            elif body.unit == "month":
+                ny, nm = (cur.year + 1, 1) if cur.month == 12 else (cur.year, cur.month + 1)
+                target = Date(ny, nm, min(cur.day, month_days(ny, nm)))
+                sim.advance(w, target.ordinal() - cur.ordinal(), stop_on_naming=False)
             else:
-                sim.tick_xun(w)
+                sim.tick_day(w)
         return {"ok": True, "message": None, "state": snap()}
 
     @app.post("/api/naming")
@@ -344,7 +353,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
 
     def launcher_started(w: World) -> bool:
         """是否已经进入了游戏会话（启动器只在全新初始世界上出现）。"""
-        return (w.date.year, w.date.month, w.date.xun) != (1066, 1, 0) or w.over
+        return (w.date.year, w.date.month, w.date.day) != (1066, 1, 1) or w.over
 
     @app.get("/api/launcher")
     async def launcher_state() -> dict:

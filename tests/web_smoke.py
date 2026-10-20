@@ -35,13 +35,13 @@ def main() -> None:
 
     # ── 推旬 ──
     before = snap["date"]
-    r = client.post("/api/tick", json={"unit": "xun"})
+    r = client.post("/api/tick", json={"unit": "day"})
     assert r.status_code == 200
     snap = r.json()["state"]
-    assert (snap["date"]["year"], snap["date"]["month"], snap["date"]["xun"]) != (
-        before["year"], before["month"], before["xun"]
+    assert (snap["date"]["year"], snap["date"]["month"], snap["date"]["day"]) != (
+        before["year"], before["month"], before["day"]
     )
-    print("[tick xun] OK")
+    print("[tick day] OK")
 
     # ── 推年（stop_on_naming：可能停在起名事件）──
     r = client.post("/api/tick", json={"unit": "year"})
@@ -51,8 +51,8 @@ def main() -> None:
     print("[tick year] OK  推进到", snap["date"]["label"])
 
     # ── 起名（构造一个确定待命名场景：直接推年直到队列非空）──
-    for _ in range(30):
-        snap = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+    for _ in range(800):
+        snap = client.post("/api/tick", json={"unit": "day"}).json()["state"]
         if snap["over"] or snap["naming_queue"]:
             break
     if snap["naming_queue"]:
@@ -134,8 +134,8 @@ def main() -> None:
     print("[legacy reject] OK ", res["message"])
 
     # ── 教养礼：推年直到 6 岁孩子进入队列，指派开蒙 ──
-    for _ in range(12):
-        snap = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+    for _ in range(1200):
+        snap = client.post("/api/tick", json={"unit": "day"}).json()["state"]
         if snap["over"] or snap["tutoring_queue"]:
             break
     if snap["tutoring_queue"]:
@@ -164,8 +164,12 @@ def main() -> None:
     pools = r.json()
     own, other = pools["own"], pools["other"]
     print("[pools] OK  自家", len(own), "他人", len(other))
-    if own and other:
-        a, b = own[0], other[0]
+    pair = next(
+        ((a, b) for a in own for b in other if a["gender"] != b["gender"]),
+        None,
+    )
+    if pair:
+        a, b = pair
         r = client.post("/api/betrothal", json={"a_id": a["id"], "b_id": b["id"], "patrilineal": False})
         res = r.json()
         assert res["ok"], res["message"]
@@ -179,15 +183,15 @@ def main() -> None:
             assert not r.json()["ok"]
         print("[betrothal] OK", b["name"], "母系")
     else:
-        print("[betrothal] SKIP  无可订孩子")
+        print("[betrothal] SKIP  无异性可订孩子")
 
     # ── 性情抉择（9/12/15 岁） + 童年特质/转换存在性 ──
     snap = client.get("/api/state").json()
     kids = [c for c in snap["characters"] if c["alive"] and not c["is_adult"]]
     if not snap["trait_queue"] and kids:
         # 快进到第一个抉择点
-        for _ in range(12):
-            s2 = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+        for _ in range(1200):
+            s2 = client.post("/api/tick", json={"unit": "day"}).json()["state"]
             if s2["over"] or s2["trait_queue"]:
                 snap = s2
                 break
@@ -217,8 +221,8 @@ def main() -> None:
     snap = client.get("/api/state").json()
     newborn = next((c for c in snap["characters"] if c["alive"] and c["age"] < 1), None)
     if newborn is None:
-        for _ in range(8):
-            s2 = client.post("/api/tick", json={"unit": "year"}).json()["state"]
+        for _ in range(800):
+            s2 = client.post("/api/tick", json={"unit": "day"}).json()["state"]
             if s2["over"]:
                 break
             if s2["naming_queue"]:
@@ -255,7 +259,7 @@ def main() -> None:
     snap = res["state"]
     r = client.get("/api/launcher")
     assert r.json()["started"] is False, "新局不该被视为已开局"
-    client.post("/api/tick", json={"unit": "xun"})
+    client.post("/api/tick", json={"unit": "day"})
     r = client.get("/api/launcher")
     assert r.json()["started"] is True, "推旬后应视为已开局"
     print("[launcher start] OK  空清单开局正常，started 判定可以随进度发生")

@@ -7,11 +7,12 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
+from .. import __version__
 from .models import Character, Dynasty
 from .time import Date
 from .world import World
 
-SAVE_VERSION = 3
+SAVE_VERSION = 5  # v5：公历日回合 + 人物生月生日 + 游戏版本/模组快照
 SAVE_DIR = Path("saves")
 
 # 旧档 log 的 emoji 前缀 -> 事件类型
@@ -42,7 +43,7 @@ def _events_from_log(log: list[str]) -> list[dict]:
             elif "成为" in msg and "家主" in msg:
                 etype = "succession"
         events.append(
-            {"year": None, "month": None, "xun": None, "type": etype, "text": text, "actors": []}
+            {"year": None, "month": None, "day": None, "type": etype, "text": text, "actors": []}
         )
     return events
 
@@ -58,8 +59,14 @@ def _rng_state_from_json(data) -> tuple:
 
 
 def world_to_dict(world: World) -> dict:
+    from . import mods as mods_core
+
+    enabled = mods_core.load_config()["enabled"]
+    mod_versions = {info.folder: info.version for info in mods_core.scan() if info.valid}
     return {
         "version": SAVE_VERSION,
+        "game_version": __version__,
+        "mods": {"enabled": enabled, "versions": mod_versions},
         "date": world.date.to_dict(),
         "player_id": world.player_id,
         "next_char_id": world.next_char_id,
@@ -81,6 +88,11 @@ def world_to_dict(world: World) -> dict:
 
 
 def world_from_dict(data: dict) -> World:
+    version = int(data.get("version", 0))
+    if version < SAVE_VERSION:
+        from .. import i18n
+
+        raise ValueError(i18n.t("save.old_version", version=version, current=SAVE_VERSION))
     world = World(date=Date.from_dict(data["date"]))
     world.player_id = data.get("player_id")
     world.next_char_id = data.get("next_char_id", 1)
@@ -174,6 +186,10 @@ def list_saves(save_dir: str | Path = SAVE_DIR) -> list[dict]:
                 "name": data.get("save_name") or f.stem,
                 "year": date.get("year", "?"),
                 "month": date.get("month", "?"),
+                "day": date.get("day", "?"),
+                "version": data.get("version", 0),
+                "game_version": data.get("game_version", ""),
+                "mods": data.get("mods", {"enabled": [], "versions": {}}),
                 "mtime": f.stat().st_mtime,
             }
         )

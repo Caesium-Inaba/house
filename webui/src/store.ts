@@ -15,8 +15,8 @@ export interface EventWin {
   y: number
 }
 
-/** 自动推进速率五档（一旬间隔 ms，档位越高越快） */
-export const SPEED_INTERVALS = [1300, 650, 340, 170, 80]
+/** 自动推进速率五档（一日间隔 ms，档位越高越快；最快档一年约 9 秒） */
+export const SPEED_INTERVALS = [400, 200, 100, 50, 25]
 
 export interface Toast {
   id: number
@@ -90,7 +90,7 @@ export function stabiliseSnapshot(s: Snapshot): Snapshot {
   })
   // 事件不可变：内容完全相同即复用引用，新增才产生新引用
   const events = s.events.map((e) => {
-    const key = `${e.year}|${e.month}|${e.xun}|${e.type}|${e.text}`
+    const key = `${e.year}|${e.month}|${e.day}|${e.type}|${e.text}`
     const prev = eventCache.get(key)
     if (prev) return prev
     eventCache.set(key, e)
@@ -237,7 +237,7 @@ export async function runAction(
  * 备份（旧行为）：遇事件 setAuto(false) 并打开阻塞式 modal；已由事件浮窗替代，
  * 恢复方法：在 openEventWin 处换回 setAuto(false)+openModal(...)。
  */
-export async function tickTime(unit: 'xun' | 'year'): Promise<void> {
+export async function tickTime(unit: 'day' | 'month' | 'year'): Promise<void> {
   await runAction(() => api.tick(unit), { silent: true })
   const snap = useStore.getState().snap
   if (snap?.over) {

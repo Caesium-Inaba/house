@@ -55,7 +55,7 @@ export interface CharacterInfo {
   opinions: OpinionInfo[]
   children_born: number
   pregnant: boolean
-  pregnancy_months_left: number | null
+  pregnancy_days_left: number | null
   relation: string | null
   culture: string
   culture_label: string
@@ -76,7 +76,7 @@ export interface CharacterInfo {
 export interface EventInfo {
   year: number | null
   month: number | null
-  xun: number | null
+  day: number | null
   type: string
   key?: string
   params?: Record<string, string | number>
@@ -85,6 +85,7 @@ export interface EventInfo {
 }
 
 export interface NamingEntry {
+  due?: number | null
   child_id: number
   suggested: string
   child_name: string
@@ -96,6 +97,7 @@ export interface NamingEntry {
 }
 
 export interface TutoringEntry {
+  due?: number | null
   child_id: number
   name: string
   gender: 'male' | 'female'
@@ -115,6 +117,7 @@ export interface TutoringEntry {
 }
 
 export interface TraitPickEntry {
+  due?: number | null
   child_id: number
   name: string
   gender: 'male' | 'female'
@@ -172,7 +175,6 @@ export interface StatsInfo {
 
 export interface MetaInfo {
   attrs: { key: string; label: string }[]
-  xun_names: string[]
   health_tiers: { floor: number | null; label: string }[]
   consort_limit: number
   start_year: number
@@ -181,7 +183,7 @@ export interface MetaInfo {
 }
 
 export interface Snapshot {
-  date: { year: number; month: number; xun: number; label: string }
+  date: { year: number; month: number; day: number; ordinal: number; label: string }
   player_id: number
   over: boolean
   over_reason: string
@@ -206,6 +208,10 @@ export interface SaveInfo {
   name: string
   year: number | string
   month: number | string
+  day: number | string
+  version: number
+  game_version: string
+  mods: { enabled: string[]; versions: Record<string, string> }
   mtime: number
 }
 

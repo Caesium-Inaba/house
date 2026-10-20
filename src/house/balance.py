@@ -6,11 +6,13 @@
 
 from __future__ import annotations
 
-# ── 时间 ────────────────────────────────────────────────
+# ── 时间（现代公历，一日一回合） ─────────────────────────
 START_YEAR = 1066
-XUN_PER_MONTH = 3
 MONTHS_PER_YEAR = 12
-XUN_NAMES = ("上旬", "中旬", "下旬")
+DAYS_PER_MONTH_NORMAL = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+DAYS_PER_MONTH_LEAP = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+PREGNANCY_DAYS = 273                       # 妊娠约 9 个公历月（9 * 30.4 ≈ 273）
+EVENT_DUE_DAYS = 60                        # 待人事件（命名/教养/择性）逾期自动落定：两个月按 60 天
 
 # ── 属性 ────────────────────────────────────────────────
 ATTRS: dict[str, str] = {
@@ -46,7 +48,6 @@ MAX_CHILDREN_FEMALE = 9                    # 女性最多 9 胎（第 9 胎双�
 MAX_CHILDREN_MALE_BASE = 9                 # 男性最多 9 个存活子女
 MALE_CHILDREN_PER_EXTRA_CONSORT = 2        # 每额外配偶 +2 男性上限
 TWIN_CHANCE = 0.03                         # 双胞胎 3%（游戏数据值，wiki 无表）
-PREGNANCY_MONTHS = 9
 # 分娩死亡：基础 + 年龄项；wiki 定性「母亲健康越低越危险、经产顾客更安全」→ 档位乘数（可调）
 CHILDBED_DEATH_BASE = 0.015                # 分娩死亡基础风险（随年龄上升）
 CHILDBED_DEATH_AGE_FACTOR = 0.0015

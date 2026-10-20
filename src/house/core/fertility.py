@@ -87,14 +87,20 @@ def _can_conceive(world: World, mother: Character) -> bool:
     return not mother.is_pregnant
 
 
+def daily_settlement(world: World) -> None:
+    """每日：妊娠推进，满 273 天分娩。"""
+    for mother in list(world.characters.values()):
+        if mother.gender != "female" or not mother.is_alive or not mother.is_pregnant:
+            continue
+        mother.pregnancy_days -= 1
+        if mother.pregnancy_days <= 0:
+            childbirth(world, mother)
+
+
 def monthly_settlement(world: World) -> None:
+    """每月 1 日：受孕 roll（妊娠推进在每日结算）。"""
     for mother in list(world.characters.values()):
         if mother.gender != "female" or not mother.is_alive or mother.age < 16:
-            continue
-        if mother.is_pregnant:
-            mother.pregnancy_months -= 1
-            if mother.pregnancy_months <= 0:
-                childbirth(world, mother)
             continue
         if not _can_conceive(world, mother):
             continue
@@ -102,7 +108,7 @@ def monthly_settlement(world: World) -> None:
         if father is None or not father.is_alive or father.age < 16:
             continue
         if world.rng.random() < monthly_conception_chance(world, father, mother):
-            mother.pregnancy_months = B.PREGNANCY_MONTHS
+            mother.pregnancy_days = B.PREGNANCY_DAYS
             mother.pregnancy_father = father.id
             dyn = world.dynasty_name_of(father.id)
             world.add_log(f"♡ {i18n.t('event.pregnancy', mother=mother.name, dynasty=dyn)}")
@@ -128,7 +134,7 @@ def _childbed_risk(mother: Character) -> float:
 
 def childbirth(world: World, mother: Character) -> None:
     father_id = mother.pregnancy_father
-    mother.pregnancy_months = None
+    mother.pregnancy_days = None
     mother.pregnancy_father = None
     mother.children_born += 1
 

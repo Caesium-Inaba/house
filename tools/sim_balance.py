@@ -29,10 +29,9 @@ def main() -> None:
     print(f"{'年份':>6} {'人口':>5} {'家族':>5} {'外交':>6} {'谋略':>6} {'勇武':>6} {'max外交':>7} {'威望':>7} {'家族威望':>8}")
 
     for _ in range(0, YEARS, 10):
-        for _ in range(3 * 12 * 10):
-            sim.tick_xun(world)
-            if world.over:
-                break
+        sim.advance(world, 365 * 10)
+        if world.over:
+            pass
         alive = world.alive()
         if not alive:
             break

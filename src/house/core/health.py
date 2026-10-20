@@ -48,28 +48,28 @@ def kill(world: World, char: Character, reason: str) -> None:
     )
 
 
-def yearly_health(world: World) -> None:
-    for char in world.alive():
-        age = char.age
-        # 儿童早夭（近似）
-        if age < B.CHILDHOOD_END and world.rng.random() < B.CHILD_MORTALITY_YEARLY:
-            kill(world, char, "childhood")
-            continue
-        # 成年人意外（近似）
-        if age >= B.CHILDHOOD_END and age < B.OLD_AGE_DEATH_AGE:
-            if world.rng.random() < B.ADULT_ACCIDENT_YEARLY:
-                kill(world, char, "accident")
-                continue
-        if age >= B.HEALTH_LOSS_START_AGE:
-            chance = B.HEALTH_LOSS_CHANCE + (age - B.HEALTH_LOSS_START_AGE) * B.HEALTH_LOSS_CHANCE_INCREMENT
-            if world.rng.random() < chance:
-                char.health -= B.HEALTH_LOSS_AMOUNT
-        if age >= B.PROWESS_LOSS_START_AGE:
-            chance = B.PROWESS_LOSS_CHANCE + (age - B.PROWESS_LOSS_START_AGE) * B.PROWESS_LOSS_CHANCE_INCREMENT
-            if world.rng.random() < chance:
-                char.attributes["prowess"] = max(0, char.attributes.get("prowess", 0) - 1)
-        if world.rng.random() < B.DISEASE_YEARLY_CHANCE:
-            char.health -= B.DISEASE_HEALTH_LOSS
+def annual_person(world: World, char: Character) -> None:
+    """生日当天的个人年度结算：早夭/意外/健康与勇武衰减/疾病/死亡判定。"""
+    age = char.age
+    # 儿童早夭（近似）
+    if age < B.CHILDHOOD_END and world.rng.random() < B.CHILD_MORTALITY_YEARLY:
+        kill(world, char, "childhood")
+        return
+    # 成年人意外（近似）
+    if B.CHILDHOOD_END <= age < B.OLD_AGE_DEATH_AGE:
+        if world.rng.random() < B.ADULT_ACCIDENT_YEARLY:
+            kill(world, char, "accident")
+            return
+    if age >= B.HEALTH_LOSS_START_AGE:
+        chance = B.HEALTH_LOSS_CHANCE + (age - B.HEALTH_LOSS_START_AGE) * B.HEALTH_LOSS_CHANCE_INCREMENT
+        if world.rng.random() < chance:
+            char.health -= B.HEALTH_LOSS_AMOUNT
+    if age >= B.PROWESS_LOSS_START_AGE:
+        chance = B.PROWESS_LOSS_CHANCE + (age - B.PROWESS_LOSS_START_AGE) * B.PROWESS_LOSS_CHANCE_INCREMENT
+        if world.rng.random() < chance:
+            char.attributes["prowess"] = max(0, char.attributes.get("prowess", 0) - 1)
+    if world.rng.random() < B.DISEASE_YEARLY_CHANCE:
+        char.health -= B.DISEASE_HEALTH_LOSS
 
-        if world.rng.random() < death_chance(char):
-            kill(world, char, "disease" if char.health < 3 else "old_age")
+    if world.rng.random() < death_chance(char):
+        kill(world, char, "disease" if char.health < 3 else "old_age")

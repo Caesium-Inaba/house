@@ -198,7 +198,7 @@ export default function CharacterDrawer() {
         )}
         {char.pregnant && (
           <div style={{ color: 'var(--verdant)', fontSize: 12.5, marginTop: 6 }}>
-            ♡ {t('char.pregnant', { n: char.pregnancy_months_left ?? '?' })}
+            ♡ {t('char.pregnant', { n: Math.max(1, Math.ceil((char.pregnancy_days_left ?? 0) / 30)) })}
           </div>
         )}
       </div>

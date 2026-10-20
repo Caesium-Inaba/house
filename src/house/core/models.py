@@ -15,6 +15,8 @@ class Character:
     name: str
     gender: str  # "male" / "female"
     birth_year: int
+    birth_month: int = 1
+    birth_day: int = 1
     dynasty: Optional[int] = None
     father: Optional[int] = None
     mother: Optional[int] = None
@@ -48,7 +50,7 @@ class Character:
     piety: float = 0.0
 
     opinions: dict[int, int] = field(default_factory=dict)  # 对他人好感 -100..100
-    pregnancy_months: Optional[int] = None
+    pregnancy_days: Optional[int] = None
     pregnancy_father: Optional[int] = None
     children_born: int = 0
 
@@ -61,9 +63,13 @@ class Character:
     def is_adult(self) -> bool:
         return self.age >= B.CHILDHOOD_END
 
-    def age_at(self, year: int) -> int:
+    def age_at(self, year: int, month: int = 12, day: int = 31) -> int:
+        """精确到日的岁数：当年生日未到则少一岁（死亡后停在死亡年）。"""
         end = self.death_year if self.death_year is not None else year
-        return end - self.birth_year
+        age = end - self.birth_year
+        if self.death_year is None and (month, day) < (self.birth_month, self.birth_day):
+            age -= 1
+        return max(0, age)
 
     # 运行时缓存，由 World.refresh_ages() 按当前年份更新
     _age_cache: int = field(default=0, repr=False)
@@ -74,7 +80,7 @@ class Character:
 
     @property
     def is_pregnant(self) -> bool:
-        return self.pregnancy_months is not None
+        return self.pregnancy_days is not None
 
     def attr(self, key: str) -> int:
         return self.attributes.get(key, 0)
@@ -94,6 +100,8 @@ class Character:
             "name": self.name,
             "gender": self.gender,
             "birth_year": self.birth_year,
+            "birth_month": self.birth_month,
+            "birth_day": self.birth_day,
             "dynasty": self.dynasty,
             "father": self.father,
             "mother": self.mother,
@@ -118,7 +126,7 @@ class Character:
             "prestige": self.prestige,
             "piety": self.piety,
             "opinions": {str(k): v for k, v in self.opinions.items()},
-            "pregnancy_months": self.pregnancy_months,
+            "pregnancy_days": self.pregnancy_days,
             "pregnancy_father": self.pregnancy_father,
             "children_born": self.children_born,
         }
@@ -130,6 +138,8 @@ class Character:
             name=data["name"],
             gender=data["gender"],
             birth_year=data["birth_year"],
+            birth_month=data.get("birth_month", 1),
+            birth_day=data.get("birth_day", 1),
             dynasty=data.get("dynasty"),
             father=data.get("father"),
             mother=data.get("mother"),
@@ -154,7 +164,7 @@ class Character:
             prestige=data.get("prestige", 0.0),
             piety=data.get("piety", 0.0),
             opinions={int(k): v for k, v in data.get("opinions", {}).items()},
-            pregnancy_months=data.get("pregnancy_months"),
+            pregnancy_days=data.get("pregnancy_days"),
             pregnancy_father=data.get("pregnancy_father"),
             children_born=data.get("children_born", 0),
         )

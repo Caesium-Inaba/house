@@ -33,7 +33,7 @@ export default function MarriageModal() {
       setOwn((r.own as CharacterInfo[]) ?? [])
       setOther((r.other as CharacterInfo[]) ?? [])
     })
-  }, [modal, snap?.date.year, snap?.date.month, snap?.date.xun])
+  }, [modal, snap?.date.year, snap?.date.month, snap?.date.day])
 
   const sorted = useMemo(() => {
     if (!cands) return null

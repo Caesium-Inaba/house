@@ -16,23 +16,23 @@ from . import traits as T
 from .. import i18n
 from .world import World
 
-DUE_LAG = 2  # 入队后 2 个月内未处理则自动落定（月）
+DUE_LAG = 2  # 入队后 2 个月内未处理则自动落定（天回合下取 60 天，见 balance.EVENT_DUE_DAYS）
 
 
-def _overdue(entry: dict, y: int, m: int) -> bool:
+def _overdue(entry: dict, today: int) -> bool:
     due = entry.get("due")
-    if not due:
+    if not isinstance(due, int):
         return False  # 旧档/未打戳的条目不超时（保持原语义）
-    return (y, m) >= (tuple(due))
+    return today >= due
 
 
 def sweep(world: World) -> None:
-    """每旬检查过期事件并自动落定。"""
-    y, m = world.date.year, world.date.month
+    """每日检查过期事件并自动落定。"""
+    today = world.date.ordinal()
 
     # ── 命名礼：落定入队时的推荐名（缺省沿用出生名） ──
     for entry in list(world.naming_queue):
-        if not _overdue(entry, y, m):
+        if not _overdue(entry, today):
             continue
         child = world.get(entry.get("child_id", -1))
         if child is None:
@@ -44,7 +44,7 @@ def sweep(world: World) -> None:
 
     # ── 教养礼：童年特质推定方向；监护人优先推荐位，缺则同族最佳、无则随机成人 ──
     for entry in list(world.tutoring_queue):
-        if not _overdue(entry, y, m):
+        if not _overdue(entry, today):
             continue
         child = world.get(entry.get("child_id", -1))
         if child is None:
@@ -55,7 +55,7 @@ def sweep(world: World) -> None:
 
     # ── 性情抉择：优先「师长言传」，缺则随机一个不冲突的特质 ──
     for entry in list(world.trait_queue):
-        if not _overdue(entry, y, m):
+        if not _overdue(entry, today):
             continue
         child = world.get(entry.get("child_id", -1))
         if child is None:

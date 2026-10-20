@@ -61,11 +61,12 @@ def _node_label(char: Character, player_id: Optional[int] = None) -> Text:
     return Text(text, style=" ".join(styles)) if styles else Text(text)
 
 
-def _played_label(year: int, month: int, xun: int) -> str:
-    total = ((year - B.START_YEAR) * B.MONTHS_PER_YEAR + (month - 1)) * B.XUN_PER_MONTH + xun
-    y, rem = divmod(total, B.MONTHS_PER_YEAR * B.XUN_PER_MONTH)
-    m, q = divmod(rem, B.XUN_PER_MONTH)
-    return f"已游玩 {y}年{m}月{q}旬"
+def _played_label(date) -> str:
+    from ..core.time import Date as _D
+    days = date.ordinal()
+    y, rem = divmod(days, 365)
+    m, d = divmod(rem, 30)
+    return f"已游玩 {y}年{m}月{d}日"
 
 
 def _distance_to(world, cid: int, ancestor_id: Optional[int]) -> Optional[int]:
@@ -132,7 +133,7 @@ class MainScreen(Screen):
                     yield Button("退出", id="quit")
                 with Horizontal(id="timebar"):
                     yield Static(id="time")
-                    yield Button("旬", id="tick_xun", classes="square")
+                    yield Button("日", id="tick_day", classes="square")
                     yield Button("年", id="tick_year", classes="square")
         yield Footer()
 
@@ -152,7 +153,7 @@ class MainScreen(Screen):
     def refresh_events(self) -> None:
         world = self.app.world
         busy = bool(world.naming_queue)
-        self.query_one("#tick_xun", Button).disabled = busy
+        self.query_one("#tick_day", Button).disabled = busy
         self.query_one("#tick_year", Button).disabled = busy
         title = self.query_one("#event_title", Static)
         body = self.query_one("#event_body", Static)
@@ -220,7 +221,7 @@ class MainScreen(Screen):
 
     def refresh_time(self) -> None:
         d = self.app.world.date
-        label = _played_label(d.year, d.month, d.xun) if self.show_played else d.label()
+        label = _played_label(d) if self.show_played else d.label_zh()
         self.query_one("#time", Static).update(label)
 
     def on_click(self, event: events.Click) -> None:
@@ -230,10 +231,10 @@ class MainScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         bid = event.button.id
-        if bid == "tick_xun":
-            sim.tick_xun(self.app.world)
+        if bid == "tick_day":
+            sim.tick_day(self.app.world)
         elif bid == "tick_year":
-            sim.advance(self.app.world, B.XUN_PER_MONTH * B.MONTHS_PER_YEAR, stop_on_naming=True)
+            sim.advance(self.app.world, 365, stop_on_naming=True)
         elif bid == "family":
             self.app.push_screen(FamilyTreeScreen())
             return
@@ -450,7 +451,7 @@ class LoadDialog(ModalScreen):
                 if not self._saves:
                     yield Static("（暂无存档）")
                 for i, s in enumerate(self._saves):
-                    yield Button(f"{s['name']}  ·  {s['year']}年{s['month']}月", id=f"load_{i}")
+                    yield Button(f"{s['name']}  ·  {s['year']}年{s['month']}月{s.get('day', 1)}日", id=f"load_{i}")
             yield Button("取消", id="load_cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

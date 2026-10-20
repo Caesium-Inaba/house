@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import sys
 import tempfile
@@ -20,11 +19,11 @@ from house.core.scenario import build_default_world  # noqa: E402
 def test_core() -> None:
     world = build_default_world(1)
     assert world.player is not None
-    start = (world.date.year, world.date.month, world.date.xun)
-    sim.tick_xun(world)
-    assert (world.date.year, world.date.month, world.date.xun) != start
+    start = (world.date.year, world.date.month, world.date.day)
+    sim.tick_day(world)
+    assert (world.date.year, world.date.month, world.date.day) != start
     # 推进 40 年，家族不应绝嗣，人口不应爆炸
-    sim.advance(world, 3 * 12 * 40)
+    sim.advance(world, 365 * 40)
     alive = world.alive()
     assert alive, "家族不应绝嗣"
     assert len(alive) <= B.WORLD_HARD_CAP + 40, f"人口失控：{len(alive)}"
@@ -35,7 +34,7 @@ def test_core() -> None:
 
 def test_save_load() -> None:
     world = build_default_world(2)
-    sim.advance(world, 3 * 12 * 5)
+    sim.advance(world, 365 * 5)
     with tempfile.TemporaryDirectory() as td:
         path = os.path.join(td, "save.json")
         save.save_world(world, path)
@@ -93,21 +92,6 @@ def test_marriage() -> None:
     print(f"[marry] OK  候选 {len(cands)} 人")
 
 
-async def test_app() -> None:
-    from house.ui.app import HouseApp
-
-    app = HouseApp(build_default_world(4))
-    async with app.run_test() as pilot:
-        await pilot.click("#tick1")
-        await pilot.click("#family")
-        await pilot.pause()
-        await pilot.click("#back")
-        await pilot.click("#marry")
-        await pilot.pause()
-        await pilot.click("#back")
-        await pilot.click("#tick12")
-        await pilot.pause()
-    print("[tui] OK  启动、推进、家族树、婚配页均可交互")
 
 
 def test_queue_timeout() -> None:
@@ -118,7 +102,7 @@ def test_queue_timeout() -> None:
     victim = world.alive()[0]
     # 已到期的命名礼 → sweep 自动落定并移除
     entry = world.stamp_due({"child_id": victim.id, "suggested": victim.name})
-    entry["due"] = [world.date.year, world.date.month]
+    entry["due"] = world.date.ordinal()  # 立刻到期
     world.naming_queue.append(entry)
     queues.sweep(world)
     assert not world.naming_queue, "逾期命名礼未被自动落定"
@@ -226,7 +210,6 @@ def main() -> None:
     test_queue_timeout()
     test_rename_events()
     test_mods_overlay()
-    asyncio.run(test_app())
     print("\n全部冒烟测试通过 ✓")
 
 

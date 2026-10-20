@@ -61,7 +61,7 @@ export default function TopBar() {
           <>
             <span className="d-year">{snap.date.year}年</span>
             <span className="d-sub">
-              {snap.date.month}月 {snap.meta.xun_names[snap.date.xun]}
+              {snap.date.month}月 {snap.date.day}日
             </span>
           </>
         )}
@@ -91,8 +91,11 @@ export default function TopBar() {
             </button>
           ))}
         </div>
-        <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('xun')}>
-          推一旬
+        <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('day')}>
+          推一日
+        </button>
+        <button className="btn" disabled={!canTick || busy} onClick={() => tickTime('month')}>
+          推一月
         </button>
         <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('year')}>
           推一年 <kbd>Y</kbd>

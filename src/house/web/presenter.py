@@ -183,7 +183,7 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         "opinions": top_opinions,
         "children_born": char.children_born,
         "pregnant": char.is_pregnant,
-        "pregnancy_months_left": char.pregnancy_months if char.is_pregnant else None,
+        "pregnancy_days_left": char.pregnancy_days if char.is_pregnant else None,
     }
     if player is not None:
         out["relation"] = _relation(world, player, char)
@@ -257,6 +257,7 @@ def _naming_entries(world: World) -> list[dict]:
                 "culture": culture,
                 "culture_label": i18n.t(f"culture.{culture}"),
                 "relation": relation or i18n.t("relation.descendant"),
+                "due": entry.get("due"),
                 "suggestions": suggestions,
             }
         )
@@ -345,6 +346,7 @@ def _tutoring_entries(world: World) -> list[dict]:
                     if child.childhood_trait else None
                 ),
                 "relation": _relation(world, player, child) if player else None,
+                "due": entry.get("due"),
                 "suggested_focus": focus,
                 "focus_options": [
                     {"key": k, "label": i18n.t(f"attr.{k}")} for k in T.education_routes()
@@ -378,6 +380,7 @@ def _traitpick_entries(world: World) -> list[dict]:
                 "age": child.age,
                 "relation": _relation(world, player, child) if player else None,
                 "guardian_name": display_name(world, guardian) if guardian else None,
+                "due": entry.get("due"),
                 "existing": [T.trait_name(t) for t in sorted(child.traits)],
                 "options": options,
             }
@@ -438,8 +441,9 @@ def build_snapshot(world: World) -> dict:
         "date": {
             "year": date.year,
             "month": date.month,
-            "xun": date.xun,
-            "label": i18n.t("date.label", year=date.year, month=date.month, xun=i18n.t(f"xun.{date.xun}")),
+            "day": date.day,
+            "ordinal": date.ordinal(),
+            "label": i18n.t("date.label", year=date.year, month=date.month, day=date.day),
         },
         "player_id": world.player_id,
         "over": world.over,
@@ -470,7 +474,6 @@ def build_snapshot(world: World) -> dict:
         },
         "meta": {
             "attrs": [{"key": k, "label": i18n.t(f"attr.{k}")} for k in B.ATTRS],
-            "xun_names": [i18n.t(f"xun.{i}") for i in range(3)],
             "health_tiers": [
                 {"floor": None if f == float("-inf") else f, "key": k, "label": i18n.t(f"health.tier.{k}")}
                 for f, k in HEALTH_TIER_KEYS

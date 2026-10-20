@@ -1,4 +1,4 @@
-"""回合推进与结算编排。"""
+"""回合推进与结算编排（一日一回合，公历）。"""
 
 from __future__ import annotations
 
@@ -8,35 +8,35 @@ from . import traits as T
 from .world import World
 
 
-def tick_xun(world: World) -> None:
-    """推进一旬，并在月末 / 年末触发结算。"""
+def tick_day(world: World) -> None:
+    """推进一日：生日结算逐人触发；每月 1 日跑月度结算；每年 1 月 1 日跑年度资源。"""
     if world.over:
         return
-    world.refresh_ages()
     rolled_month, rolled_year = world.date.advance()
     world.refresh_ages()
 
     if rolled_month:
         monthly_settlement(world)
     if rolled_year:
-        yearly_settlement(world)
+        _yearly_resources(world)
 
-    # 事件不阻塞时间（CK3 式）：待办逾期 2 个月未处理则自动落定
+    fertility.daily_settlement(world)
+    birthday_settlement(world)
+
+    # 事件不阻塞时间（CK3 式）：待办逾期 60 天未处理则自动落定
     queues.sweep(world)
 
-    world.refresh_ages()
     inheritance.handle_player_death(world)
 
 
-def advance(world: World, xuns: int, stop_on_naming: bool = False) -> None:
-    """推进 xuns 旬。
+def advance(world: World, days: int, stop_on_naming: bool = False) -> None:
+    """推进 days 日。
 
     备份（旧行为）：stop_on_naming=True 时遇到待命名队列即停——事件阻塞时间流动。
-    该机制已保留；事件窗口化上线后默认走非阻塞（False），如需恢复阻塞式推进，
-    把 server.py /api/tick 的 stop_on_naming 改回 True 即可。
+    该机制已保留；事件窗口化后默认走非阻塞（False）。
     """
-    for _ in range(xuns):
-        tick_xun(world)
+    for _ in range(days):
+        tick_day(world)
         if world.over:
             break
         if stop_on_naming and world.naming_queue:
@@ -44,17 +44,23 @@ def advance(world: World, xuns: int, stop_on_naming: bool = False) -> None:
 
 
 def monthly_settlement(world: World) -> None:
+    """每月 1 日：受孕 roll、圆婚、AI 婚配、意见衰减。"""
     fertility.monthly_settlement(world)
     marriage.fulfill_betrothals(world)
     marriage.ai_marriages(world)
     opinion.monthly_decay(world)
 
 
-def yearly_settlement(world: World) -> None:
-    health.yearly_health(world)
-    world.refresh_ages()
-    genetics.grow_children(world)
-    _yearly_resources(world)
+def birthday_settlement(world: World) -> None:
+    """生日当天：该角色的年度个人结算（健康衰减/死亡判定/成长/教育）。"""
+    d = world.date
+    for char in world.alive():
+        if char.birth_month != d.month or char.birth_day != d.day:
+            continue
+        health.annual_person(world, char)
+        if not char.is_alive:
+            continue
+        genetics.annual_growth(world, char)
 
 
 def _yearly_resources(world: World) -> None:

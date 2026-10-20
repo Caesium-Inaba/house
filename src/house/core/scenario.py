@@ -15,6 +15,26 @@ from .models import Character
 from .world import World
 
 
+# 开局史实人物生日：史料多仅存出生年份，月日为游戏采定数据（确定值，不随机）。
+_SCENARIO_BIRTHDAYS: dict[str, tuple[int, int]] = {
+    "弗拉季斯拉夫": (6, 15),
+    "斯瓦塔瓦": (3, 2),
+    "布热季斯拉夫": (2, 14),
+    "尤迪塔": (9, 9),
+    "博莱斯瓦夫": (1, 20),
+    "阿格涅什卡": (5, 5),
+    "盖佐": (4, 12),
+    "伊洛娜": (7, 7),
+    "韦尔夫": (11, 3),
+    "玛蒂尔达": (3, 21),
+    "雅罗米尔": (10, 30),
+}
+
+
+def _birthday(name: str) -> tuple[int, int]:
+    return _SCENARIO_BIRTHDAYS.get(name, (1, 1))
+
+
 def _adult(
     world: World,
     name: str,
@@ -28,12 +48,15 @@ def _adult(
     personality: Optional[set[str]] = None,
 ) -> Character:
     genes = dict(genes or {})
+    bm, bd = _birthday(name)
     full_attrs = {k: attrs.get(k, B.ATTR_BASE) for k in B.ATTR_KEYS}
     char = Character(
         id=world.new_char_id(),
         name=name,
         gender=gender,
         birth_year=birth_year,
+        birth_month=bm,
+        birth_day=bd,
         dynasty=dynasty,
         genes=genes,
         education=education,
@@ -62,11 +85,14 @@ def _child(
     mother: Character,
     dynasty: Optional[int],
 ) -> Character:
+    bm, bd = _birthday(name)
     char = Character(
         id=world.new_char_id(),
         name=name,
         gender=gender,
         birth_year=birth_year,
+        birth_month=bm,
+        birth_day=bd,
         dynasty=dynasty,
         father=father.id,
         mother=mother.id,
@@ -88,7 +114,7 @@ def build_default_world(seed: Optional[int] = None) -> World:
         world.rng.seed(seed)
     world.date.year = 1066
     world.date.month = 1
-    world.date.xun = 0
+    world.date.day = 1
 
     premyslid = world.add_dynasty("普热梅斯利德", "czech")
     piast = world.add_dynasty("皮亚斯特", "polish")
@@ -162,7 +188,7 @@ def build_default_world(seed: Optional[int] = None) -> World:
            education="edu_learning_3", personality={"chaste", "content"})
 
     world.refresh_ages()
-    world.add_log(f"1066年1月 上旬：{i18n.t('event.scenario_start')}")
+    world.add_log(f"1066年1月1日：{i18n.t('event.scenario_start')}")
     world.add_event("succession", "event.scenario_start", {}, [vratislav.id])
     world.head_history.append(vratislav.id)
     return world

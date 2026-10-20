@@ -10,7 +10,7 @@ const zh: Record<string, string> = {
   'top.gen': '代',
   'top.auto': '自动',
   'top.stop': '停',
-  'top.tick_xun': '推一旬',
+  'top.tick_day': '推一日',
   'top.tick_year': '推一年',
   'top.tree': '家族树',
   'top.marriage': '婚配',
@@ -106,7 +106,7 @@ const zh: Record<string, string> = {
   'modal.shelve': '先搁置',
   'modal.close': '✕',
   // 事件浮窗（非模态，时间不停）
-  'evwin.timeout_hint': '两个月内未处置将自动落定',
+  'evwin.timeout_hint': '{n} 天内未处置将自动落定',
   // 流速五档 + 暂停/开始
   'top.speed_hint': '推进速率（5 档）· 空格 = 暂停 / 开始',
   // 启动器（模组管理）

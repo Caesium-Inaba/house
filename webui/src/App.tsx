@@ -35,7 +35,7 @@ export default function App() {
   useEffect(() => {
     if (!auto || busy || !snap || snap.over) return
     const interval = SPEED_INTERVALS[Math.max(0, Math.min(SPEED_INTERVALS.length - 1, speed - 1))]
-    const t = setTimeout(() => void tickTime('xun'), interval)
+    const t = setTimeout(() => void tickTime('day'), interval)
     return () => clearTimeout(t)
   }, [auto, busy, snap, speed])
 

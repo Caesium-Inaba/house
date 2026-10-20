@@ -77,7 +77,7 @@ class MainScreen(Screen):
             with VerticalScroll(id="log_scroll"):
                 yield Static(id="log")
             with Container(id="buttons"):
-                yield Button("推进一旬", id="tick1", variant="primary")
+                yield Button("推进一日", id="tick1", variant="primary")
                 yield Button("推进一年", id="tick12")
                 yield Button("家族树", id="family")
                 yield Button("婚配", id="marry")
@@ -124,9 +124,9 @@ class MainScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         bid = event.button.id
         if bid == "tick1":
-            sim.tick_xun(self.app.world)
+            sim.tick_day(self.app.world)
         elif bid == "tick12":
-            sim.advance(self.app.world, B.XUN_PER_MONTH * B.MONTHS_PER_YEAR)
+            sim.advance(self.app.world, 365)
         elif bid == "family":
             self.app.push_screen(FamilyTreeScreen())
             return

@@ -30,8 +30,7 @@ const EventRow = memo(
 
 function dayLabel(e: EventInfo): string {
   if (e.year == null) return t('day.before')
-  const xun = e.xun != null ? ` ${['上旬', '中旬', '下旬'][e.xun]}` : ''
-  return `${e.year}年${e.month != null ? ` ${e.month}月` : ''}${xun}`
+  return `${e.year}年${e.month != null ? ` ${e.month}月` : ''}${e.day != null ? `${e.day}日` : ''}`
 }
 
 /* 事件分日渲染：actor 名字可点。人物引用由父层预取（引用稳定化后可跳过） */
@@ -208,7 +207,7 @@ export default function Chronicle() {
         <div className="chronicle">
           {shown.map(({ e, head }) => (
             <EventRow
-              key={`${e.year ?? 'x'}-${e.month ?? 'x'}-${e.xun ?? 'x'}-${e.type}-${e.text}`}
+              key={`${e.year ?? 'x'}-${e.month ?? 'x'}-${e.day ?? 'x'}-${e.type}-${e.text}`}
               e={e}
               actors={e.actors.map((id) => byId.get(id) ?? null)}
               head={head}

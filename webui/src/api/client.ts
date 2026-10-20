@@ -26,7 +26,7 @@ function post(path: string, body?: unknown): Promise<ApiResponse> {
 
 export const api = {
   state: (): Promise<ApiResponse> => fetch('/api/state').then(jf),
-  tick: (unit: 'xun' | 'year'): Promise<ApiResponse> => post('/api/tick', { unit }),
+  tick: (unit: 'day' | 'month' | 'year'): Promise<ApiResponse> => post('/api/tick', { unit }),
   naming: (child_id: number, name: string): Promise<ApiResponse> =>
     post('/api/naming', { child_id, name }),
   rename: (child_id: number, name: string): Promise<ApiResponse> =>

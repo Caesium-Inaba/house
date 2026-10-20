@@ -190,6 +190,8 @@ def create_child(
         name=pick_name(world, culture, gender, exclude=used),
         gender=gender,
         birth_year=world.date.year,
+        birth_month=world.date.month,
+        birth_day=world.date.day,
         dynasty=dynasty,
         father=father_id,
         mother=mother_id,
@@ -243,49 +245,48 @@ TRAIT_PICK_AGES = (9, 12, 15)  # 性情抉择点位（CK3 童年多次性格事�
 GUARDIAN_TRAIT_INFLUENCE = 0.6  # 候选之一跟随监护人性格的概率（适配，可调）
 
 
-def grow_children(world: World) -> None:
-    """每年推进一次：童年特质显现、性情抉择、教育判定（CK3）、属性成长、16 岁定型。"""
-    for child in world.alive():
-        age = child.age
-        if age >= B.CHILDHOOD_END:
-            if child.education is None:
-                finalize_education(world, child)
-            continue
-        if age < B.CHILDHOOD_START:
-            continue
-        # ── 6 岁生日：童年特质显现 + 进入教养队列 ──
-        if child.childhood_trait is None:
-            T.roll_childhood_trait(world, child)
-            child.education_focus = T.childhood_focus(child.childhood_trait)  # CK3 默认推定
-            params = {"child": child.name, "trait": T.childhood_name(child.childhood_trait)}
-            world.add_log(f"🧒 {i18n.t('event.childhood_trait', **params)}")
-            world.add_event("trait", "event.childhood_trait", params, [child.id])
-            if world.is_descendant(child.id, world.player_id):
-                world.tutoring_queue.append(
-                    world.stamp_due({"child_id": child.id})
-                )
-            else:
-                auto_tutor(world, child)
-        elif child.education_focus is None:
-            child.education_focus = T.childhood_focus(child.childhood_trait)
-        # ── 9/12/15 岁：性情抉择（CK3 童年多次性格事件，适配点位） ──
-        if age in TRAIT_PICK_AGES and not any(e.get("child_id") == child.id for e in world.trait_queue):
-            if world.is_descendant(child.id, world.player_id):
-                world.trait_queue.append(world.stamp_due({"child_id": child.id, "age": age}))
-            else:
-                _auto_trait_pick(world, child)
-        # ── 年度教育判定（CK3 生日 roll：成功 +2 分） ──
-        if child.education_focus is not None and child.education is None:
-            if world.rng.random() < _edu_success_chance(world, child):
-                child.education_score += B.EDU_SCORE_PER_SUCCESS
-        # ── 属性向潜力成长（原有成长曲线保留） ──
-        cong = T.congenital_attr_bonus(child.genes)
-        progress = (age - B.CHILDHOOD_START + 1) / (B.CHILDHOOD_END - B.CHILDHOOD_START)
-        for key in B.ATTR_KEYS:
-            goal = child.potential[key] + cong.get(key, 0)
-            target = round(goal * (0.3 + 0.7 * progress))
-            cur = child.attributes[key]
-            child.attributes[key] = cur + max(1, round((target - cur) * 0.34))
+def annual_growth(world: World, child: Character) -> None:
+    """生日当天结算：童年特质显现、性情抉择、教育判定（CK3）、属性成长、16 岁定型。"""
+    age = child.age
+    if age >= B.CHILDHOOD_END:
+        if child.education is None:
+            finalize_education(world, child)
+        return
+    if age < B.CHILDHOOD_START:
+        return
+    # ── 6 岁生日：童年特质显现 + 进入教养队列 ──
+    if child.childhood_trait is None:
+        T.roll_childhood_trait(world, child)
+        child.education_focus = T.childhood_focus(child.childhood_trait)  # CK3 默认推定
+        params = {"child": child.name, "trait": T.childhood_name(child.childhood_trait)}
+        world.add_log(f"🧒 {i18n.t('event.childhood_trait', **params)}")
+        world.add_event("trait", "event.childhood_trait", params, [child.id])
+        if world.is_descendant(child.id, world.player_id):
+            world.tutoring_queue.append(
+                world.stamp_due({"child_id": child.id})
+            )
+        else:
+            auto_tutor(world, child)
+    elif child.education_focus is None:
+        child.education_focus = T.childhood_focus(child.childhood_trait)
+    # ── 9/12/15 岁：性情抉择（CK3 童年多次性格事件，适配点位） ──
+    if age in TRAIT_PICK_AGES and not any(e.get("child_id") == child.id for e in world.trait_queue):
+        if world.is_descendant(child.id, world.player_id):
+            world.trait_queue.append(world.stamp_due({"child_id": child.id, "age": age}))
+        else:
+            _auto_trait_pick(world, child)
+    # ── 年度教育判定（CK3 生日 roll：成功 +2 分） ──
+    if child.education_focus is not None and child.education is None:
+        if world.rng.random() < _edu_success_chance(world, child):
+            child.education_score += B.EDU_SCORE_PER_SUCCESS
+    # ── 属性向潜力成长（原有成长曲线保留） ──
+    cong = T.congenital_attr_bonus(child.genes)
+    progress = (age - B.CHILDHOOD_START + 1) / (B.CHILDHOOD_END - B.CHILDHOOD_START)
+    for key in B.ATTR_KEYS:
+        goal = child.potential[key] + cong.get(key, 0)
+        target = round(goal * (0.3 + 0.7 * progress))
+        cur = child.attributes[key]
+        child.attributes[key] = cur + max(1, round((target - cur) * 0.34))
 
 
 def trait_pick_options(

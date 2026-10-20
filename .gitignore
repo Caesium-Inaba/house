@@ -17,3 +17,9 @@ saves/
 
 # 截图
 shot-*.png
+
+# 自动化工具产物
+.playwright-mcp/
+.zcode/
+shot-*.png
+launcher.json

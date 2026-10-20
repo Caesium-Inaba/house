@@ -6,7 +6,7 @@
 
 import { useRef, type ReactNode } from 'react'
 import { t } from '../../i18n'
-import type { EventKind } from '../../store'
+import { useStore, type EventKind } from '../../store'
 import { NamingBody, TutoringBody, TraitPickBody } from './bodies'
 
 const TITLES: Record<EventKind, string> = {
@@ -29,6 +29,15 @@ export function EventWinBox({ kind, x, y, onClose, onMove }: {
   onMove: (x: number, y: number) => void
 }) {
   const drag = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
+  const snap = useStore((s) => s.snap)
+  const queue =
+    kind === 'naming'
+      ? snap?.naming_queue
+      : kind === 'tutoring'
+        ? snap?.tutoring_queue
+        : snap?.trait_queue
+  const due = queue?.[0]?.due
+  const daysLeft = due != null && snap ? Math.max(0, due - snap.date.ordinal) : 60
 
   return (
     <div className="event-win" style={{ left: x, top: y, width: WIDTHS[kind] }}>
@@ -49,7 +58,7 @@ export function EventWinBox({ kind, x, y, onClose, onMove }: {
         onPointerCancel={() => (drag.current = null)}
       >
         <span className="modal-title" style={{ fontSize: 15 }}>{TITLES[kind]}</span>
-        <span className="event-win-hint">{t('evwin.timeout_hint')}</span>
+        <span className="event-win-hint">{t('evwin.timeout_hint', { n: daysLeft })}</span>
         <button className="btn ghost" style={{ marginLeft: 'auto', padding: '2px 8px' }} onClick={onClose}>✕</button>
       </div>
       <Body kind={kind} shelve={onClose} />

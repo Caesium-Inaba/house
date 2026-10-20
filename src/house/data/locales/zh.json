@@ -6,9 +6,6 @@
  "attr.intrigue": "谋略",
  "attr.learning": "学识",
  "attr.prowess": "勇武",
- "xun.0": "上旬",
- "xun.1": "中旬",
- "xun.2": "下旬",
  "health.tier.dying": "濒死",
  "health.tier.near_death": "垂危",
  "health.tier.poor": "差",
@@ -178,7 +175,7 @@
  "api.legacy_maxed": "该传承树已满级",
  "api.legacy_no_renown": "宗族威名不足（需 {cost}）",
  "api.legacy_bought": "传承已解锁（-{cost} 威名）",
- "date.label": "{year}年 {month}月 {xun}",
+ "date.label": "{year}年 {month}月 {day}日",
  "api.trait_set": "天性已定（{trait}）",
  "event.scenario_start": "弗拉季斯拉夫成为普热梅斯利德家族家主。",
  "sexuality.heterosexual": "异性恋",
@@ -191,5 +188,6 @@
  "api.suicide": "自尽身亡",
  "api.debug_kill": "调试：已让 {name} 身亡",
  "api.too_old_to_rename": "只能为未满周岁的新生儿改名",
- "drawer.rename_hint": "为新生儿择名…"
+ "drawer.rename_hint": "为新生儿择名…",
+ "save.old_version": "存档版本过旧（v{version}），当前版本 v{current} 不再兼容，请开新局。"
 }

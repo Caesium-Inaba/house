@@ -99,7 +99,7 @@ export default function SaveModal() {
             <div key={s.name} className="save-slot">
               <span className="s-name">{s.name}</span>
               <span className="s-meta">
-                {s.year}年{s.month}月 · {fmtTime(s.mtime)}
+                {s.year}年{s.month}月{s.day ?? ''}日 · {fmtTime(s.mtime)}
               </span>
               {confirmDelete === s.name ? (
                 <>

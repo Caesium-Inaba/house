@@ -22,7 +22,7 @@ class World:
     next_dynasty_id: int = 1
     rng: random.Random = field(default_factory=random.Random)
     log: list[str] = field(default_factory=list)
-    # 结构化事件流（WebUI 消费）：{year, month, xun, type, text, actors}
+    # 结构化事件流（WebUI 消费）：{year, month, day, type, text, actors}
     events: list[dict] = field(default_factory=list)
     naming_queue: list[dict] = field(default_factory=list)
     tutoring_queue: list[dict] = field(default_factory=list)  # 待定教养的玩家血亲儿童
@@ -59,16 +59,15 @@ class World:
             return None
         return self.characters.get(cid)
 
-    def stamp_due(self, entry: dict, lag: int = 2) -> dict:
-        """事件入队时间戳：due = 当前月份 + lag 个月（序列化为 [year, month]）。
+    def stamp_due(self, entry: dict, lag: int | None = None) -> dict:
+        """事件入队时间戳：due = 当前日序号 + lag 天（默认 60 天，即两个月）。
 
         事件不阻塞时间流动（CK3 式），逾期未处理由 core/queues.sweep 自动落定。
+        due 存绝对日序号（Date.ordinal），跨月与闰年无缝比较。
         """
-        dy, dm = self.date.year, self.date.month + lag
-        while dm > 12:
-            dm -= 12
-            dy += 1
-        entry["due"] = [dy, dm]
+        from .. import balance as B
+
+        entry["due"] = self.date.ordinal() + (lag if lag is not None else B.EVENT_DUE_DAYS)
         return entry
 
     @property
@@ -77,7 +76,7 @@ class World:
 
     def refresh_ages(self) -> None:
         for ch in self.characters.values():
-            ch._age_cache = ch.age_at(self.date.year)
+            ch._age_cache = ch.age_at(self.date.year, self.date.month, self.date.day)
 
     def alive(self) -> list[Character]:
         return [c for c in self.characters.values() if c.is_alive]
@@ -99,7 +98,7 @@ class World:
             {
                 "year": self.date.year,
                 "month": self.date.month,
-                "xun": self.date.xun,
+                "day": self.date.day,
                 "type": etype,
                 "key": key,
                 "params": p,
