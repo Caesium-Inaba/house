@@ -305,3 +305,47 @@ export function TraitPickBody({ shelve }: { shelve: () => void }) {
     </>
   )
 }
+
+
+/* ── 精神崩溃 ── */
+export function StressBody({ shelve }: { shelve: () => void }) {
+  const snap = useStore((s) => s.snap)
+  const busy = useStore((s) => s.busy)
+  const entry = snap?.stress_queue[0] ?? null
+  if (!snap || !entry) return null
+
+  const choose = async (trait: string | null) => {
+    const res = await runAction(() => api.stressBreak(entry.char_id, trait), { silent: true })
+    if (res.ok) useStore.getState().toast(res.message ?? t('stressbreak.done'), 'good')
+  }
+
+  return (
+    <>
+      <div className="modal-body">
+        <div style={{ marginBottom: 8, fontSize: 14.5, color: 'var(--gold-bright)' }}>
+          {t('stressbreak.who', { name: entry.name, level: entry.level })}
+        </div>
+        <div style={{ color: 'var(--ink-dim)', fontSize: 12.5, marginBottom: 12 }}>
+          {t('stressbreak.hint')}
+        </div>
+        {entry.options.map((o) => (
+          <div
+            key={o.id}
+            className="save-slot"
+            style={{ cursor: 'pointer', padding: '9px 12px', marginBottom: 8 }}
+            onClick={() => void choose(o.id)}
+          >
+            <span className="s-name" style={{ minWidth: 80 }}>{o.name}</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: 11.5 }}>{o.summary}</span>
+          </div>
+        ))}
+      </div>
+      <div className="modal-foot">
+        <button className="btn" onClick={shelve}>{t('modal.shelve')}</button>
+        <button className="btn danger" disabled={busy} onClick={() => void choose(null)}>
+          {t('stressbreak.endure')}
+        </button>
+      </div>
+    </>
+  )
+}

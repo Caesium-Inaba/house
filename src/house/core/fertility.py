@@ -6,6 +6,7 @@ from .. import balance as B
 from .. import i18n
 from . import genetics
 from . import legacy
+from . import stress
 from . import traits as T
 from .models import Character
 from .world import World
@@ -43,7 +44,12 @@ def fertility_value(world: World, char: Character) -> float:
 
 def effective_fertility(world: World, char: Character) -> float:
     fm = legacy.family_modifiers(world, char.dynasty)
-    return fertility_value(world, char) * age_multiplier(world, char) * (1.0 + fm.get("fertility_mult", 0.0))
+    return (
+        fertility_value(world, char)
+        * age_multiplier(world, char)
+        * (1.0 + fm.get("fertility_mult", 0.0))
+        * stress.fertility_multiplier(char)
+    )
 
 
 def population_factor(world: World) -> float:

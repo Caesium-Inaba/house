@@ -49,6 +49,11 @@ class Character:
     prestige: float = 0.0
     piety: float = 0.0
 
+    # ── 压力（CK3） ──
+    stress: int = 0
+    decisions: dict[str, int] = field(default_factory=dict)  # 决议 id -> 可再次使用的日序号
+    last_break_ordinal: Optional[int] = None                 # 上次精神崩溃的日序号（5 年 CD）
+
     opinions: dict[int, int] = field(default_factory=dict)  # 对他人好感 -100..100
     pregnancy_days: Optional[int] = None
     pregnancy_father: Optional[int] = None
@@ -125,6 +130,9 @@ class Character:
             "money": self.money,
             "prestige": self.prestige,
             "piety": self.piety,
+            "stress": self.stress,
+            "decisions": {k: int(v) for k, v in self.decisions.items()},
+            "last_break_ordinal": self.last_break_ordinal,
             "opinions": {str(k): v for k, v in self.opinions.items()},
             "pregnancy_days": self.pregnancy_days,
             "pregnancy_father": self.pregnancy_father,
@@ -163,6 +171,9 @@ class Character:
             money=data.get("money", 0.0),
             prestige=data.get("prestige", 0.0),
             piety=data.get("piety", 0.0),
+            stress=int(data.get("stress", 0)),
+            decisions={str(k): int(v) for k, v in data.get("decisions", {}).items()},
+            last_break_ordinal=data.get("last_break_ordinal"),
             opinions={int(k): v for k, v in data.get("opinions", {}).items()},
             pregnancy_days=data.get("pregnancy_days"),
             pregnancy_father=data.get("pregnancy_father"),

@@ -12,6 +12,7 @@ from __future__ import annotations
 import random
 
 from . import genetics
+from . import stress
 from . import traits as T
 from .. import i18n
 from .world import World
@@ -63,6 +64,19 @@ def sweep(world: World) -> None:
             continue
         _fallback_trait(world, child)
         world.trait_queue.remove(entry)
+
+    # ── 精神崩溃：超时未选则自动取第一个选项 ──
+    for entry in list(world.stress_queue):
+        if not _overdue(entry, today):
+            continue
+        char = world.get(entry.get("char_id", -1))
+        if char is None or not char.is_alive:
+            world.stress_queue.remove(entry)
+            continue
+        options = entry.get("options") or []
+        stress.apply_break_choice(world, char, options[0] if options else None)
+        if entry in world.stress_queue:
+            world.stress_queue.remove(entry)
 
 
 def _fallback_tutor(world: World, child) -> None:

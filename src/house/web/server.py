@@ -20,10 +20,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .. import __version__
+from .. import VERSION_NAME, VERSION_NAME_EN, __version__
 from .. import balance as B
 from .. import i18n
-from ..core import genetics, health, legacy, marriage, mods as mods_core, save, sim
+from ..core import decisions as decisions_core
+from ..core import genetics, health, legacy, marriage, mods as mods_core, save, sim, stress as stress_core
 from ..core import traits as T
 from ..core.scenario import build_default_world
 from ..core.time import Date, is_leap, month_days
@@ -95,6 +96,24 @@ class LauncherStartBody(BaseModel):
 
 class SettingsBody(BaseModel):
     language: Optional[str] = None
+
+
+class DecisionBody(BaseModel):
+    id: str
+
+
+class StressBreakBody(BaseModel):
+    char_id: int
+    trait: Optional[str] = None
+
+
+class NoticeDismissBody(BaseModel):
+    kind: str
+
+
+class DebugStressBody(BaseModel):
+    target_id: int
+    amount: int = 50
 
 
 def _dist_dir() -> Optional[Path]:
@@ -370,6 +389,51 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         """是否已经进入了游戏会话（启动器只在全新初始世界上出现）。"""
         return (w.date.year, w.date.month, w.date.day) != (1066, 1, 1) or w.over
 
+    @app.get("/api/decisions")
+    async def get_decisions() -> dict:
+        w = world()
+        player = w.player
+        if player is None:
+            return {"ok": False, "decisions": [], "message": i18n.t("api.no_player")}
+        return {
+            "ok": True,
+            "decisions": decisions_core.list_for(w, player),
+            "stress": player.stress,
+            "max_stress": B.STRESS_MAX,
+        }
+
+    @app.post("/api/decision")
+    async def do_decision(body: DecisionBody) -> dict:
+        w = world()
+        player = w.player
+        if player is None or not player.is_alive:
+            return {"ok": False, "message": i18n.t("api.no_living_head")}
+        ok, key = decisions_core.apply(w, player, body.id)
+        return {"ok": ok, "message": i18n.t(key), "state": snap()}
+
+    @app.post("/api/stressbreak")
+    async def do_stressbreak(body: StressBreakBody) -> dict:
+        w = world()
+        ok = stress_core.resolve_pending(w, body.char_id, body.trait)
+        key = "api.stressbreak_done" if ok else "api.stressbreak_invalid"
+        return {"ok": ok, "message": i18n.t(key), "state": snap()}
+
+    @app.post("/api/notice/dismiss")
+    async def dismiss_notice(body: NoticeDismissBody) -> dict:
+        w = world()
+        if body.kind == "death":
+            w.death_notice = None
+        return {"ok": True, "message": None, "state": snap()}
+
+    @app.post("/api/debug/stress")
+    async def debug_stress(body: DebugStressBody) -> dict:
+        """仅 --debug：人为增加压力（验收/调试用）。"""
+        if not state.get("debug"):
+            raise HTTPException(403, i18n.t("api.need_debug"))
+        w = world()
+        stress_core.add_stress(w, body.target_id, body.amount, "debug")
+        return {"ok": True, "message": None, "state": snap()}
+
     @app.post("/api/settings")
     async def update_settings(body: SettingsBody) -> dict:
         """切换展示语言（现阶段立即全量重渲染；restart_required 为将来的重启式切换预留）。"""
@@ -396,6 +460,7 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
             "enabled": enabled,
             "language": state["lang"],
             "game_version": __version__,
+            "version_names": {"zh": VERSION_NAME, "en": VERSION_NAME_EN},
         }
 
     @app.post("/api/launcher/config")

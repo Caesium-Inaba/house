@@ -56,6 +56,8 @@ export interface CharacterInfo {
   children_born: number
   pregnant: boolean
   pregnancy_days_left: number | null
+  stress: number
+  stress_tier: 'calm' | 'tense' | 'fraying' | 'broken'
   relation: string | null
   culture: string
   culture_label: string
@@ -169,6 +171,8 @@ export interface StatsInfo {
   game_version: string
   language: 'zh' | 'en'
   save_version: number
+  stress_tiers: { min: number; key: string; label: string; fertility: number; health: number }[]
+  max_stress: number
   active_mods: { enabled: string[]; versions: Record<string, string> }
   years_played: number
   generations: number
@@ -185,6 +189,8 @@ export interface MetaInfo {
   game_version: string
   language: 'zh' | 'en'
   save_version: number
+  stress_tiers: { min: number; key: string; label: string; fertility: number; health: number }[]
+  max_stress: number
   active_mods: { enabled: string[]; versions: Record<string, string> }
   cultures: Record<string, string>
   gender_laws: Record<string, string>
@@ -204,6 +210,9 @@ export interface Snapshot {
   naming_queue: NamingEntry[]
   tutoring_queue: TutoringEntry[]
   trait_queue: TraitPickEntry[]
+  stress_queue: StressEntry[]
+  decision_options: DecisionOption[]
+  death_notice: DeathNotice | null
   legacies: LegacyInfo
   population: PopulationInfo
   heir: CharacterInfo | null
@@ -251,4 +260,35 @@ export interface LauncherInfo {
   mods: LauncherModInfo[]
   enabled: string[]
   game_version: string
+  version_names: { zh: string; en: string }
+}
+
+export interface StressEntry {
+  char_id: number
+  name: string
+  age: number
+  level: number
+  stress: number
+  due?: number | null
+  options: { id: string; name: string; summary: string }[]
+}
+
+export interface DecisionOption {
+  id: string
+  group: 'generic' | 'coping'
+  stress: number
+  cost: Record<string, number>
+  gain: Record<string, number>
+  requires: string | null
+  cd: number
+  cd_left: number
+  available: boolean
+  reason: '' | 'locked' | 'cooldown' | 'cost'
+}
+
+export interface DeathNotice {
+  old_name: string
+  reason: string
+  heir_name: string
+  heir_age: number | null
 }

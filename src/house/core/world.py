@@ -27,6 +27,8 @@ class World:
     naming_queue: list[dict] = field(default_factory=list)
     tutoring_queue: list[dict] = field(default_factory=list)  # 待定教养的玩家血亲儿童
     trait_queue: list[dict] = field(default_factory=list)  # 待「性情抉择」的玩家血亲儿童（9/12/15 岁）
+    stress_queue: list[dict] = field(default_factory=list)  # 待处理的精神崩溃（玩家血亲）
+    death_notice: Optional[dict] = None  # 玩家角色死亡通知（前端弹层，确认后清除）
     betrothals: list[dict] = field(default_factory=list)  # [{a, b, patrilineal}]
     head_history: list[int] = field(default_factory=list)  # 历代家主继位顺序（世数计数依据）
     over: bool = False

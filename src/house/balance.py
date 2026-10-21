@@ -58,6 +58,22 @@ CHILDBED_EXP_MULT: list[tuple[int, float]] = [
     (4, 0.5), (3, 0.6), (2, 0.75), (0, 1.0),
 ]   # (已产数下界, 乘数)
 
+# ── 压力（CK3 1.20 wiki：0-400；100/200/300 三档；400 强制崩溃） ──
+STRESS_MAX = 400
+STRESS_TIER_THRESHOLDS = (100, 200, 300)
+STRESS_FERTILITY_MULT = {0: 1.0, 1: 0.9, 2: 0.7, 3: 0.5}      # 每档生育力乘数（−10%/−30%/−50%）
+STRESS_HEALTH_PENALTY = {0: 0.0, 1: 0.0, 2: -1.0, 3: -2.0}     # 每档健康惩罚
+STRESS_BREAK_COOLDOWN_DAYS = 5 * 365                            # 精神崩溃 5 年一次（wiki）
+STRESS_BREAK_LOSS = 60                                          # 崩溃选特质时的减压量（wiki 未给精确值，采定）
+STRESS_ENDURE_GAIN = 20                                         # 硬撑：再涨压力
+MAX_COPING_TRAITS = 2                                           # 应对机制最多 2 个（wiki）
+STRESS_GAIN_MINOR = 20                                          # CK3 script value minor_stress_gain（wiki 原文）
+STRESS_GAIN_MEDIUM = 30                                         # 采定（wiki 未列数值）
+# 血亲死亡：配偶/子女/父母=30，兄弟姐妹=20，祖孙=15（CK3 on_death 分级采定）
+GRIEF_STRESS_SPOUSE_CHILD_PARENT = 30
+GRIEF_STRESS_SIBLING = 20
+GRIEF_STRESS_GRANDPARENT = 15
+
 # ── 健康 ────────────────────────────────────────────────
 BIRTH_HEALTH_MALE = (4.5, 4.9)
 BIRTH_HEALTH_FEMALE = (5.0, 5.4)

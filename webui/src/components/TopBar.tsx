@@ -106,6 +106,9 @@ export default function TopBar() {
         <button className="btn" onClick={() => openModal('marriage')} disabled={!canTick}>
           {t('top.marriage')} <kbd>M</kbd>
         </button>
+        <button className="btn" onClick={() => openModal('decisions')}>
+          {t('top.decisions')}
+        </button>
         <button className="btn" onClick={() => openModal('saves')}>
           {t('top.saves')} <kbd>S</kbd>
         </button>

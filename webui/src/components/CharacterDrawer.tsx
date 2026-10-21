@@ -196,6 +196,20 @@ export default function CharacterDrawer() {
             <div className="fill" style={{ width: `${char.health_norm * 100}%` }} />
           </div>
         )}
+        {char.alive && char.relation != null && (
+          <>
+            <div className="divider-label" style={{ marginTop: 10 }}>
+              {t('stress.label')} ·{' '}
+              {snap?.meta.stress_tiers.find((tier) => tier.key === char.stress_tier)?.label ?? ''}
+              <span style={{ marginLeft: 'auto', color: 'var(--ink-faint)' }}>
+                {char.stress}/{snap?.meta.max_stress ?? 400}
+              </span>
+            </div>
+            <div className="bar stress">
+              <div className="fill" style={{ width: `${Math.min(100, (char.stress / (snap?.meta.max_stress ?? 400)) * 100)}%` }} />
+            </div>
+          </>
+        )}
         {char.pregnant && (
           <div style={{ color: 'var(--verdant)', fontSize: 12.5, marginTop: 6 }}>
             ♡ {t('char.pregnant', { n: Math.max(1, Math.ceil((char.pregnancy_days_left ?? 0) / 30)) })}

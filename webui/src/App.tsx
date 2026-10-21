@@ -10,6 +10,8 @@ import FamilyTree from './components/FamilyTree'
 import EventWindows from './components/eventwin/EventWindows'
 import MarriageModal from './components/modals/MarriageModal'
 import SaveModal from './components/modals/SaveModal'
+import DecisionsModal from './components/modals/DecisionsModal'
+import DeathNotice from './components/modals/DeathNotice'
 import NewGameModal from './components/modals/NewGameModal'
 import GameOver from './components/modals/GameOver'
 import Toasts from './components/modals/Toasts'
@@ -106,6 +108,8 @@ export default function App() {
 
       {snap.over && <GameOver />}
 
+      <DeathNotice />
+
       {!snap.over && <CharacterDrawer />}
 
       <FamilyTree />
@@ -114,6 +118,7 @@ export default function App() {
           modal 组件保留在 modals/ 下作为备份，需要恢复阻塞式时在此挂回。 */}
       {!snap.over && <EventWindows />}
       <MarriageModal />
+      <DecisionsModal />
       <SaveModal />
       <NewGameModal />
       <Toasts />

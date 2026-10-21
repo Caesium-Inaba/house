@@ -1,97 +1,660 @@
 {
-  "_comment": "特质库（数值锚定 CK3 1.20，ck3db.com 采录）。显示名一律走 data/locales/zh.json 的 trait.* / edu.* 键，本文件只存数值与结构。",
-  "congenital_groups": {
-    "intellect": {
-      "levels_attrs": {
-        "1": {"diplomacy": 2, "stewardship": 1, "intrigue": 2, "learning": 3},
-        "2": {"diplomacy": 3, "stewardship": 2, "intrigue": 3, "learning": 4},
-        "3": {"diplomacy": 5, "stewardship": 3, "intrigue": 4, "learning": 6},
-        "-1": {"diplomacy": -1, "stewardship": -1, "intrigue": -2, "learning": -2},
-        "-2": {"diplomacy": -2, "stewardship": -2, "intrigue": -3, "learning": -4},
-        "-3": {"diplomacy": -5, "stewardship": -3, "intrigue": -4, "learning": -6}
-      },
-      "levels": ["-3", "-2", "-1", "1", "2", "3"],
-      "edu_factor": {"3": 20, "2": 15, "1": 10, "-1": 10, "-2": 15, "-3": 20}
+ "_comment": "特质库（数值锚定 CK3 1.20，ck3db.com 采录）。显示名一律走 data/locales/zh.json 的 trait.* / edu.* 键，本文件只存数值与结构。",
+ "congenital_groups": {
+  "intellect": {
+   "levels_attrs": {
+    "1": {
+     "diplomacy": 2,
+     "stewardship": 1,
+     "intrigue": 2,
+     "learning": 3
     },
-    "beauty": {
-      "levels_attrs": {
-        "1": {"diplomacy": 1},
-        "2": {"diplomacy": 3},
-        "3": {"diplomacy": 5},
-        "-1": {"diplomacy": -1},
-        "-2": {"diplomacy": -2},
-        "-3": {"diplomacy": -3}
-      },
-      "levels": ["-3", "-2", "-1", "1", "2", "3"]
+    "2": {
+     "diplomacy": 3,
+     "stewardship": 2,
+     "intrigue": 3,
+     "learning": 4
     },
-    "physique": {
-      "attrs": ["martial"],
-      "per_level_attrs": 1,
-      "per_level_health": 0.25,
-      "per_level_prowess": 1,
-      "levels": ["-3", "-2", "-1", "1", "2", "3"]
+    "3": {
+     "diplomacy": 5,
+     "stewardship": 3,
+     "intrigue": 4,
+     "learning": 6
+    },
+    "-1": {
+     "diplomacy": -1,
+     "stewardship": -1,
+     "intrigue": -2,
+     "learning": -2
+    },
+    "-2": {
+     "diplomacy": -2,
+     "stewardship": -2,
+     "intrigue": -3,
+     "learning": -4
+    },
+    "-3": {
+     "diplomacy": -5,
+     "stewardship": -3,
+     "intrigue": -4,
+     "learning": -6
     }
+   },
+   "levels": [
+    "-3",
+    "-2",
+    "-1",
+    "1",
+    "2",
+    "3"
+   ],
+   "edu_factor": {
+    "3": 20,
+    "2": 15,
+    "1": 10,
+    "-1": 10,
+    "-2": 15,
+    "-3": 20
+   }
   },
-  "childhood": {
-    "_comment": "6 岁显现；focus 为推定教育方向；converts 为成年转换的性格特质（社区通识表，中置信度）；attrs 参 CK3 1.20 实机数据。",
-    "bossy": {"focus": "stewardship", "attrs": {"stewardship": 1, "martial": 1}, "converts": "arrogant"},
-    "charming": {"focus": "diplomacy", "attrs": {"intrigue": 1, "diplomacy": 1}, "converts": "gregarious"},
-    "curious": {"focus": "learning", "attrs": {"diplomacy": 1, "learning": 1}, "converts": "deceitful"},
-    "pensive": {"focus": "intrigue", "attrs": {"learning": 1, "stewardship": 1}, "converts": "calm"},
-    "rowdy": {"focus": "martial", "attrs": {"martial": 1, "intrigue": 1}, "converts": "wroth"}
-  },
-  "traits": {
-    "fecund": {"fertility": 25.0, "decay_offset_years": 5},
-    "inbred": {
-      "fertility": -50.0,
-      "health": -1.5,
-      "prowess": -2,
-      "edu_penalty": 20,
-      "attrs": {"diplomacy": -5, "martial": -5, "stewardship": -5, "intrigue": -5, "learning": -5}
+  "beauty": {
+   "levels_attrs": {
+    "1": {
+     "diplomacy": 1
     },
-    "pure_blooded": {"fertility": 10.0, "health": 0.25, "inbreeding_resist": 0.5},
-    "giant": {"prowess": 3, "health": -0.5},
-    "dwarf": {"prowess": -2, "health": -0.25},
-    "albino": {"health": -1.0},
-    "sickly": {"health": -1.5}
+    "2": {
+     "diplomacy": 3
+    },
+    "3": {
+     "diplomacy": 5
+    },
+    "-1": {
+     "diplomacy": -1
+    },
+    "-2": {
+     "diplomacy": -2
+    },
+    "-3": {
+     "diplomacy": -3
+    }
+   },
+   "levels": [
+    "-3",
+    "-2",
+    "-1",
+    "1",
+    "2",
+    "3"
+   ]
   },
-  "personality": {
-    "brave": {"opposites": ["craven"], "attrs": {"martial": 2}, "prowess": 3, "opp_opinion": -10},
-    "craven": {"opposites": ["brave"], "attrs": {"martial": -2, "intrigue": 2}, "prowess": -3, "opp_opinion": -10},
-    "calm": {"opposites": ["wroth"], "attrs": {"diplomacy": 1, "intrigue": 1}, "stress_loss": 0.10, "opp_opinion": -10},
-    "wroth": {"opposites": ["calm", "patient"], "attrs": {"diplomacy": -1, "martial": 3, "intrigue": -1}, "opp_opinion": -10},
-    "chaste": {"opposites": ["lustful"], "attrs": {"learning": 2}, "fertility": -25.0, "opp_opinion": -10},
-    "lustful": {"opposites": ["chaste"], "attrs": {"intrigue": 2}, "fertility": 25.0, "opp_opinion": -10},
-    "diligent": {"opposites": ["lazy"], "attrs": {"diplomacy": 2, "stewardship": 3, "learning": 3}, "stress_loss": -0.50, "opp_opinion": -10},
-    "lazy": {"opposites": ["diligent"], "attrs": {"diplomacy": -1, "martial": -1, "stewardship": -1, "intrigue": -1, "learning": -1}, "stress_loss": 0.50, "opp_opinion": -10},
-    "compassionate": {"opposites": ["cruel"], "attrs": {"diplomacy": 2}, "stress_gain": 0.25, "opp_opinion": -10},
-    "cruel": {"opposites": ["compassionate"], "attrs": {"diplomacy": -2, "intrigue": 2}, "stress_loss": 0.15, "opp_opinion": -10},
-    "generous": {"opposites": ["greedy"], "attrs": {"diplomacy": 3}, "money_pct": -0.10, "opp_opinion": -15},
-    "greedy": {"opposites": ["generous"], "attrs": {"diplomacy": -2}, "money_pct": 0.05, "stress_gain": 0.10, "opp_opinion": -10},
-    "gregarious": {"opposites": ["shy"], "attrs": {"diplomacy": 2}, "opp_opinion": -10},
-    "shy": {"opposites": ["gregarious"], "attrs": {"diplomacy": -2, "learning": 1}, "opp_opinion": -10},
-    "honest": {"opposites": ["deceitful"], "attrs": {"diplomacy": 2, "intrigue": -4}, "opp_opinion": -10},
-    "deceitful": {"opposites": ["honest"], "attrs": {"diplomacy": -2, "intrigue": 4}, "opp_opinion": -10},
-    "humble": {"opposites": ["arrogant"], "piety_monthly": 0.5, "opp_opinion": -15},
-    "arrogant": {"opposites": ["humble"], "prestige_monthly": 1.0, "opp_opinion": -15},
-    "just": {"opposites": ["arbitrary"], "attrs": {"stewardship": 2, "intrigue": -3, "learning": 1}, "opp_opinion": -10},
-    "arbitrary": {"opposites": ["just"], "attrs": {"stewardship": -2, "intrigue": 3, "learning": -1}, "opp_opinion": -10},
-    "patient": {"opposites": ["impatient", "wroth"], "attrs": {"learning": 2}, "opp_opinion": -15},
-    "impatient": {"opposites": ["patient"], "attrs": {"learning": -2}, "prestige_pct": 0.20, "opp_opinion": -15},
-    "temperate": {"opposites": ["gluttonous"], "attrs": {"stewardship": 2}, "health": 0.25, "opp_opinion": -10},
-    "gluttonous": {"opposites": ["temperate"], "attrs": {"stewardship": -2}, "stress_loss": 0.10, "opp_opinion": -10},
-    "trusting": {"opposites": ["paranoid"], "attrs": {"diplomacy": 2, "intrigue": -2}, "opp_opinion": -10},
-    "paranoid": {"opposites": ["trusting"], "attrs": {"diplomacy": -1, "intrigue": 3}, "stress_gain": 1.0, "opp_opinion": -10},
-    "zealous": {"opposites": ["cynical"], "attrs": {"martial": 2}, "piety_pct": 0.20, "opp_opinion": -10},
-    "cynical": {"opposites": ["zealous"], "attrs": {"intrigue": 2, "learning": 2}, "piety_pct": -0.20, "opp_opinion": -10},
-    "ambitious": {"opposites": ["content"], "prestige_monthly": 2.0, "opp_opinion": -10},
-    "content": {"opposites": ["ambitious"], "stress_loss": 0.20, "opinion_of_kin": 5, "opp_opinion": -10},
-    "forgiving": {"opposites": ["vengeful"], "attrs": {"diplomacy": 2, "intrigue": -2, "learning": 1}, "opinion_of_kin": 10, "opp_opinion": -10},
-    "vengeful": {"opposites": ["forgiving"], "attrs": {"diplomacy": -2, "intrigue": 2, "prowess": 2}, "stress_loss": 0.10, "opp_opinion": -10}
-  },
-  "education": {
-    "routes": ["diplomacy", "martial", "stewardship", "intrigue", "learning"],
-    "route_labels_via_i18n": true,
-    "per_level_attrs": {"1": 2, "2": 5, "3": 8, "4": 10}
+  "physique": {
+   "attrs": [
+    "martial"
+   ],
+   "per_level_attrs": 1,
+   "per_level_health": 0.25,
+   "per_level_prowess": 1,
+   "levels": [
+    "-3",
+    "-2",
+    "-1",
+    "1",
+    "2",
+    "3"
+   ]
   }
+ },
+ "childhood": {
+  "_comment": "6 岁显现；focus 为推定教育方向；converts 为成年转换的性格特质（社区通识表，中置信度）；attrs 参 CK3 1.20 实机数据。",
+  "bossy": {
+   "focus": "stewardship",
+   "attrs": {
+    "stewardship": 1,
+    "martial": 1
+   },
+   "converts": "arrogant"
+  },
+  "charming": {
+   "focus": "diplomacy",
+   "attrs": {
+    "intrigue": 1,
+    "diplomacy": 1
+   },
+   "converts": "gregarious"
+  },
+  "curious": {
+   "focus": "learning",
+   "attrs": {
+    "diplomacy": 1,
+    "learning": 1
+   },
+   "converts": "deceitful"
+  },
+  "pensive": {
+   "focus": "intrigue",
+   "attrs": {
+    "learning": 1,
+    "stewardship": 1
+   },
+   "converts": "calm"
+  },
+  "rowdy": {
+   "focus": "martial",
+   "attrs": {
+    "martial": 1,
+    "intrigue": 1
+   },
+   "converts": "wroth"
+  }
+ },
+ "traits": {
+  "fecund": {
+   "fertility": 25.0,
+   "decay_offset_years": 5
+  },
+  "inbred": {
+   "fertility": -50.0,
+   "health": -1.5,
+   "prowess": -2,
+   "edu_penalty": 20,
+   "attrs": {
+    "diplomacy": -5,
+    "martial": -5,
+    "stewardship": -5,
+    "intrigue": -5,
+    "learning": -5
+   }
+  },
+  "pure_blooded": {
+   "fertility": 10.0,
+   "health": 0.25,
+   "inbreeding_resist": 0.5
+  },
+  "giant": {
+   "prowess": 3,
+   "health": -0.5
+  },
+  "dwarf": {
+   "prowess": -2,
+   "health": -0.25
+  },
+  "albino": {
+   "health": -1.0
+  },
+  "sickly": {
+   "health": -1.5
+  },
+  "drunkard": {
+   "coping": true,
+   "unlocks": "coping_drink",
+   "attrs": {
+    "stewardship": -2
+   },
+   "prowess": -2,
+   "health": -0.15,
+   "stress_loss": 0.2
+  },
+  "flagellant": {
+   "coping": true,
+   "unlocks": "coping_flagellate",
+   "prowess": -2,
+   "health": -0.15,
+   "stress_loss": 0.2
+  },
+  "comfort_eater": {
+   "coping": true,
+   "unlocks": "coping_food",
+   "attrs": {
+    "stewardship": -1
+   },
+   "stress_loss": 0.2
+  },
+  "contrite": {
+   "coping": true,
+   "unlocks": "coping_confess",
+   "attrs": {
+    "intrigue": -2
+   },
+   "stress_loss": 0.2
+  },
+  "improvident": {
+   "coping": true,
+   "unlocks": "coping_charity",
+   "attrs": {
+    "diplomacy": 1
+   },
+   "money_pct": -0.15,
+   "piety_monthly": 0.5,
+   "stress_loss": 0.2
+  },
+  "inappetetic": {
+   "coping": true,
+   "unlocks": "coping_shun_food",
+   "attrs": {
+    "diplomacy": -1
+   },
+   "prowess": -3,
+   "stress_loss": 0.2
+  },
+  "reclusive": {
+   "coping": true,
+   "unlocks": "coping_seclude",
+   "attrs": {
+    "diplomacy": -2,
+    "stewardship": -1
+   },
+   "stress_loss": 0.2
+  },
+  "irritable": {
+   "coping": true,
+   "unlocks": "coping_lash_out",
+   "attrs": {
+    "diplomacy": -2,
+    "martial": -1
+   },
+   "prowess": 2,
+   "stress_loss": 0.2
+  },
+  "rakish": {
+   "coping": true,
+   "unlocks": "coping_brothel",
+   "attrs": {
+    "diplomacy": -1,
+    "intrigue": 1
+   },
+   "stress_loss": 0.2
+  },
+  "profligate": {
+   "coping": true,
+   "unlocks": "coping_market",
+   "money_pct": -0.1,
+   "prestige_monthly": 0.5,
+   "stress_loss": 0.2
+  },
+  "confider": {
+   "coping": true,
+   "unlocks": "coping_confide",
+   "attrs": {
+    "diplomacy": 1
+   },
+   "stress_loss": 0.2
+  },
+  "journaller": {
+   "coping": true,
+   "unlocks": "coping_journal",
+   "attrs": {
+    "learning": 1
+   },
+   "stress_loss": 0.2
+  },
+  "athletic": {
+   "coping": true,
+   "unlocks": "coping_workout",
+   "prowess": 1,
+   "health": 0.25,
+   "stress_loss": 0.2
+  },
+  "melancholic": {
+   "health": -1.0
+  },
+  "eccentric": {
+   "attrs": {
+    "learning": 1,
+    "diplomacy": -1
+   }
+  },
+  "lunatic": {
+   "health": -1.0,
+   "attrs": {
+    "stewardship": -2,
+    "learning": -2
+   }
+  }
+ },
+ "personality": {
+  "brave": {
+   "opposites": [
+    "craven"
+   ],
+   "attrs": {
+    "martial": 2
+   },
+   "prowess": 3,
+   "opp_opinion": -10
+  },
+  "craven": {
+   "opposites": [
+    "brave"
+   ],
+   "attrs": {
+    "martial": -2,
+    "intrigue": 2
+   },
+   "prowess": -3,
+   "opp_opinion": -10
+  },
+  "calm": {
+   "opposites": [
+    "wroth"
+   ],
+   "attrs": {
+    "diplomacy": 1,
+    "intrigue": 1
+   },
+   "stress_loss": 0.1,
+   "opp_opinion": -10
+  },
+  "wroth": {
+   "opposites": [
+    "calm",
+    "patient"
+   ],
+   "attrs": {
+    "diplomacy": -1,
+    "martial": 3,
+    "intrigue": -1
+   },
+   "opp_opinion": -10
+  },
+  "chaste": {
+   "opposites": [
+    "lustful"
+   ],
+   "attrs": {
+    "learning": 2
+   },
+   "fertility": -25.0,
+   "opp_opinion": -10
+  },
+  "lustful": {
+   "opposites": [
+    "chaste"
+   ],
+   "attrs": {
+    "intrigue": 2
+   },
+   "fertility": 25.0,
+   "opp_opinion": -10
+  },
+  "diligent": {
+   "opposites": [
+    "lazy"
+   ],
+   "attrs": {
+    "diplomacy": 2,
+    "stewardship": 3,
+    "learning": 3
+   },
+   "stress_loss": -0.5,
+   "opp_opinion": -10
+  },
+  "lazy": {
+   "opposites": [
+    "diligent"
+   ],
+   "attrs": {
+    "diplomacy": -1,
+    "martial": -1,
+    "stewardship": -1,
+    "intrigue": -1,
+    "learning": -1
+   },
+   "stress_loss": 0.5,
+   "opp_opinion": -10
+  },
+  "compassionate": {
+   "opposites": [
+    "cruel"
+   ],
+   "attrs": {
+    "diplomacy": 2
+   },
+   "stress_gain": 0.25,
+   "opp_opinion": -10
+  },
+  "cruel": {
+   "opposites": [
+    "compassionate"
+   ],
+   "attrs": {
+    "diplomacy": -2,
+    "intrigue": 2
+   },
+   "stress_loss": 0.15,
+   "opp_opinion": -10
+  },
+  "generous": {
+   "opposites": [
+    "greedy"
+   ],
+   "attrs": {
+    "diplomacy": 3
+   },
+   "money_pct": -0.1,
+   "opp_opinion": -15
+  },
+  "greedy": {
+   "opposites": [
+    "generous"
+   ],
+   "attrs": {
+    "diplomacy": -2
+   },
+   "money_pct": 0.05,
+   "stress_gain": 0.1,
+   "opp_opinion": -10
+  },
+  "gregarious": {
+   "opposites": [
+    "shy"
+   ],
+   "attrs": {
+    "diplomacy": 2
+   },
+   "opp_opinion": -10
+  },
+  "shy": {
+   "opposites": [
+    "gregarious"
+   ],
+   "attrs": {
+    "diplomacy": -2,
+    "learning": 1
+   },
+   "opp_opinion": -10
+  },
+  "honest": {
+   "opposites": [
+    "deceitful"
+   ],
+   "attrs": {
+    "diplomacy": 2,
+    "intrigue": -4
+   },
+   "opp_opinion": -10
+  },
+  "deceitful": {
+   "opposites": [
+    "honest"
+   ],
+   "attrs": {
+    "diplomacy": -2,
+    "intrigue": 4
+   },
+   "opp_opinion": -10
+  },
+  "humble": {
+   "opposites": [
+    "arrogant"
+   ],
+   "piety_monthly": 0.5,
+   "opp_opinion": -15
+  },
+  "arrogant": {
+   "opposites": [
+    "humble"
+   ],
+   "prestige_monthly": 1.0,
+   "opp_opinion": -15
+  },
+  "just": {
+   "opposites": [
+    "arbitrary"
+   ],
+   "attrs": {
+    "stewardship": 2,
+    "intrigue": -3,
+    "learning": 1
+   },
+   "opp_opinion": -10
+  },
+  "arbitrary": {
+   "opposites": [
+    "just"
+   ],
+   "attrs": {
+    "stewardship": -2,
+    "intrigue": 3,
+    "learning": -1
+   },
+   "opp_opinion": -10
+  },
+  "patient": {
+   "opposites": [
+    "impatient",
+    "wroth"
+   ],
+   "attrs": {
+    "learning": 2
+   },
+   "opp_opinion": -15
+  },
+  "impatient": {
+   "opposites": [
+    "patient"
+   ],
+   "attrs": {
+    "learning": -2
+   },
+   "prestige_pct": 0.2,
+   "opp_opinion": -15
+  },
+  "temperate": {
+   "opposites": [
+    "gluttonous"
+   ],
+   "attrs": {
+    "stewardship": 2
+   },
+   "health": 0.25,
+   "opp_opinion": -10
+  },
+  "gluttonous": {
+   "opposites": [
+    "temperate"
+   ],
+   "attrs": {
+    "stewardship": -2
+   },
+   "stress_loss": 0.1,
+   "opp_opinion": -10
+  },
+  "trusting": {
+   "opposites": [
+    "paranoid"
+   ],
+   "attrs": {
+    "diplomacy": 2,
+    "intrigue": -2
+   },
+   "opp_opinion": -10
+  },
+  "paranoid": {
+   "opposites": [
+    "trusting"
+   ],
+   "attrs": {
+    "diplomacy": -1,
+    "intrigue": 3
+   },
+   "stress_gain": 1.0,
+   "opp_opinion": -10
+  },
+  "zealous": {
+   "opposites": [
+    "cynical"
+   ],
+   "attrs": {
+    "martial": 2
+   },
+   "piety_pct": 0.2,
+   "opp_opinion": -10
+  },
+  "cynical": {
+   "opposites": [
+    "zealous"
+   ],
+   "attrs": {
+    "intrigue": 2,
+    "learning": 2
+   },
+   "piety_pct": -0.2,
+   "opp_opinion": -10
+  },
+  "ambitious": {
+   "opposites": [
+    "content"
+   ],
+   "prestige_monthly": 2.0,
+   "opp_opinion": -10
+  },
+  "content": {
+   "opposites": [
+    "ambitious"
+   ],
+   "stress_loss": 0.2,
+   "opinion_of_kin": 5,
+   "opp_opinion": -10
+  },
+  "forgiving": {
+   "opposites": [
+    "vengeful"
+   ],
+   "attrs": {
+    "diplomacy": 2,
+    "intrigue": -2,
+    "learning": 1
+   },
+   "opinion_of_kin": 10,
+   "opp_opinion": -10
+  },
+  "vengeful": {
+   "opposites": [
+    "forgiving"
+   ],
+   "attrs": {
+    "diplomacy": -2,
+    "intrigue": 2,
+    "prowess": 2
+   },
+   "stress_loss": 0.1,
+   "opp_opinion": -10
+  }
+ },
+ "education": {
+  "routes": [
+   "diplomacy",
+   "martial",
+   "stewardship",
+   "intrigue",
+   "learning"
+  ],
+  "route_labels_via_i18n": true,
+  "per_level_attrs": {
+   "1": 2,
+   "2": 5,
+   "3": 8,
+   "4": 10
+  }
+ }
 }

@@ -121,6 +121,11 @@ export default function Launcher() {
           </div>
         </div>
       </aside>
+      <div className="l-version">
+        House V{info.game_version}
+        {' - '}
+        {lang === 'zh' ? info.version_names?.zh : info.version_names?.en}
+      </div>
       <main className="l-main">
         <header className="l-head">
           <span className="panel-title">{t('launcher.mods_tab')}</span>

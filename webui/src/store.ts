@@ -5,10 +5,10 @@ import type { ApiResponse, Snapshot } from './types'
 import { api } from './api/client'
 import { setLang as applyLang, t } from './i18n'
 
-export type ModalKind = 'naming' | 'tutoring' | 'traitpick' | 'marriage' | 'saves' | 'new' | null
+export type ModalKind = 'naming' | 'tutoring' | 'traitpick' | 'marriage' | 'saves' | 'new' | 'decisions' | null
 
 /** 事件窗口：非模态、可拖拽，事件弹出后时间照常流动（CK3 式） */
-export type EventKind = 'naming' | 'tutoring' | 'traitpick'
+export type EventKind = 'naming' | 'tutoring' | 'traitpick' | 'stress'
 
 export interface EventWin {
   kind: EventKind
@@ -82,6 +82,7 @@ function syncEventWins(s: Snapshot) {
   if ((s.naming_queue?.length ?? 0) === 0) st.closeEventWin('naming')
   if ((s.tutoring_queue?.length ?? 0) === 0) st.closeEventWin('tutoring')
   if ((s.trait_queue?.length ?? 0) === 0) st.closeEventWin('traitpick')
+  if ((s.stress_queue?.length ?? 0) === 0) st.closeEventWin('stress')
 }
 
 export function stabiliseSnapshot(s: Snapshot): Snapshot {
@@ -127,8 +128,13 @@ export const useStore = create<Store>((set, get) => {
     apply(res, opts) {
       if (res.state) {
         const s = stabiliseSnapshot(res.state)
+        const prev = get().snap
         set({ snap: s })
         syncEventWins(s)
+        // 玩家角色死亡通知：暂停自动推进，等玩家确认
+        if (s.death_notice && !prev?.death_notice) set({ auto: false })
+        // 崩溃事件即时弹窗（不依赖 tick 时机）
+        if ((s.stress_queue?.length ?? 0) > 0) get().openEventWin('stress')
       }
       if (res.message && !opts?.silent) toast(res.message, res.ok ? 'good' : 'bad')
     },
@@ -263,5 +269,7 @@ export async function tickTime(unit: 'day' | 'month' | 'year'): Promise<void> {
     useStore
       .getState()
       .openEventWin(snap.tutoring_queue.length > 0 ? 'tutoring' : 'traitpick')
+  } else if (snap && snap.stress_queue.length > 0) {
+    useStore.getState().openEventWin('stress')
   }
 }

@@ -35,6 +35,7 @@ def test_core() -> None:
 def test_save_load() -> None:
     world = build_default_world(2)
     sim.advance(world, 365 * 5)
+    world.player.stress = 42
     with tempfile.TemporaryDirectory() as td:
         path = os.path.join(td, "save.json")
         save.save_world(world, path)
@@ -46,6 +47,7 @@ def test_save_load() -> None:
     copy = loaded.get(loaded.player_id)
     assert copy is not None and original is not None
     assert copy.name == original.name and copy.age == original.age
+    assert copy.stress == 42, "压力未随存档往返"
     print(f"[save] OK  读档后 {loaded.player.name if loaded.player else '?'}")
 
 
@@ -202,6 +204,70 @@ def test_mods_overlay() -> None:
     print("[mods] OK  覆盖生效/回滚正确")
 
 
+
+
+def test_stress() -> None:
+    """压力：分档、崩溃入队与选择、5 年 CD、400 强制崩溃、AI 自动、血亲死亡、死亡通知。"""
+    from house.core import decisions, health, inheritance, stress
+    from house.core import traits as T
+
+    world = build_default_world(11)
+    player = world.player
+
+    # 降压决议 + CD
+    ok, key = decisions.apply(world, player, "meditate")
+    assert ok, key
+    assert player.decisions["meditate"] > world.date.ordinal()
+    ok2, key2 = decisions.apply(world, player, "meditate")
+    assert not ok2 and key2 == "api.decision_cd", (ok2, key2)
+
+    # 跨 100 触发崩溃入队（玩家本人）
+    stress.add_stress(world, player.id, 100)
+    assert player.stress >= 100
+    entry = next((e for e in world.stress_queue if e["char_id"] == player.id), None)
+    assert entry is not None, "跨档未触发精神崩溃"
+    option = entry["options"][0]
+    assert stress.resolve_pending(world, player.id, option)
+    assert option in player.traits
+    assert player.stress < 100, "崩溃后未减压"
+    assert not any(e["char_id"] == player.id for e in world.stress_queue)
+
+    # 5 年 CD：再加压跨 200 不应立刻再崩
+    stress.add_stress(world, player.id, 180)
+    assert player.stress >= 200
+    assert not any(e["char_id"] == player.id for e in world.stress_queue), "崩溃 CD 未生效"
+
+    # 400 强制崩溃并清 100
+    player.last_break_ordinal = None
+    player.stress = 390
+    stress.add_stress(world, player.id, 30)
+    assert player.stress <= 320, player.stress
+    assert any(e["char_id"] == player.id for e in world.stress_queue)
+
+    # AI 自动崩溃：不入队但拿到应对特质
+    ai = next(c for c in world.alive() if c.id != player.id and c.age >= 16)
+    before_traits = set(ai.traits)
+    stress.add_stress(world, ai.id, 120)
+    assert not any(e["char_id"] == ai.id for e in world.stress_queue), "AI 崩溃不应入队"
+    assert set(ai.traits) != before_traits, "AI 崩溃未自动获得特质"
+    assert len([t for t in ai.traits if t in T.COPING_IDS]) <= 2
+
+    # 血亲死亡 → 家长压力上升
+    world2 = build_default_world(12)
+    father = world2.player
+    child = next(c for c in world2.alive() if c.father == father.id)
+    before = father.stress
+    health.kill(world2, child, "disease")
+    assert father.stress > before, "血亲死亡未产生压力"
+
+    # 玩家死亡通知
+    world3 = build_default_world(13)
+    health.kill(world3, world3.player, "disease")
+    inheritance.handle_player_death(world3)
+    assert world3.death_notice and world3.death_notice["heir_name"], world3.death_notice
+    print("[stress] OK  分档/崩溃/CD/400/AI/悲痛/死亡通知")
+
+
 def main() -> None:
     test_core()
     test_save_load()
@@ -210,6 +276,7 @@ def main() -> None:
     test_queue_timeout()
     test_rename_events()
     test_mods_overlay()
+    test_stress()
     print("\n全部冒烟测试通过 ✓")
 
 

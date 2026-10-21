@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .. import balance as B
 from .. import i18n
+from . import stress
 from .models import Character
 from .world import World
 
@@ -14,7 +15,8 @@ def birth_health(world: World, gender: str) -> float:
 
 
 def death_chance(char: Character) -> float:
-    h, age = char.health, char.age
+    h = char.health + stress.health_penalty(char)  # 压力档位的健康惩罚计入死亡判定
+    age = char.age
     if h < 0:
         p = 0.5
     elif h < 1:
@@ -46,6 +48,7 @@ def kill(world: World, char: Character, reason: str) -> None:
     world.add_event(
         "death", "event.death", {"name": char.name, "age": char.age, "reason": reason}, [char.id]
     )
+    stress.grief_on_death(world, char)
 
 
 def annual_person(world: World, char: Character) -> None:

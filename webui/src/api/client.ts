@@ -50,6 +50,12 @@ export const api = {
     post('/api/betrothal', { a_id, b_id, patrilineal }),
   legacyBuy: (tree: string): Promise<ApiResponse> => post('/api/legacy', { tree }),
   settings: (language: 'zh' | 'en'): Promise<ApiResponse> => post('/api/settings', { language }),
+  decisions: (): Promise<ApiResponse & { decisions: import('../types').DecisionOption[] }> =>
+    fetch('/api/decisions').then((r) => jf(r)),
+  decide: (id: string): Promise<ApiResponse> => post('/api/decision', { id }),
+  stressBreak: (char_id: number, trait: string | null): Promise<ApiResponse> =>
+    post('/api/stressbreak', { char_id, trait }),
+  dismissNotice: (kind: string): Promise<ApiResponse> => post('/api/notice/dismiss', { kind }),
 }
 
 /* ── 启动器（模组管理） ── */

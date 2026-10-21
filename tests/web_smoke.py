@@ -33,6 +33,24 @@ def main() -> None:
     assert any(e["type"] == "succession" for e in snap["events"])
     print("[state] OK  在世", snap["population"]["alive"], "人")
 
+    # ── 减压决议：列表、执行与冷却 ──
+    r = client.get("/api/decisions")
+    assert r.status_code == 200 and r.json()["ok"]
+    dec = {d["id"]: d for d in r.json()["decisions"]}
+    assert {"hunt", "feast", "pilgrimage", "meditate"} <= set(dec), dec.keys()
+    assert dec["meditate"]["available"] is True
+    r = client.post("/api/decision", json={"id": "meditate"})
+    assert r.json()["ok"], r.text
+    r = client.get("/api/decisions")
+    dec = {d["id"]: d for d in r.json()["decisions"]}
+    assert dec["meditate"]["available"] is False and dec["meditate"]["reason"] == "cooldown"
+    print("[decisions] OK  静修执行且进入冷却")
+
+    # ── 调试加压：非 debug 模式拒绝 ──
+    r = client.post("/api/debug/stress", json={"target_id": 1, "amount": 50})
+    assert r.status_code == 403
+    print("[debug stress off] OK  403 拒绝")
+
     # ── 语言切换：快照与历史事件全量重渲染 ──
     r = client.post("/api/settings", json={"language": "en"})
     res = r.json()
@@ -305,6 +323,11 @@ def main() -> None:
     dead = next(c for c in res["state"]["characters"] if c["id"] == res["state"]["player_id"] or c["death_reason"] == "suicide")
     assert dead["death_reason"] == "suicide"
     assert res["state"]["over"] or any(e["type"] == "succession" for e in res["state"]["events"])
+    if not res["state"]["over"]:
+        assert res["state"]["death_notice"], "玩家死亡未生成通知"
+        r = client.post("/api/notice/dismiss", json={"kind": "death"})
+        assert r.json()["state"]["death_notice"] is None
+        print("[death notice] OK  家主死亡通知已弹并确认清除")
     print("[suicide] OK  继承或绝嗣已触发")
 
     print("\nWebUI 冒烟测试全部通过 ✓")

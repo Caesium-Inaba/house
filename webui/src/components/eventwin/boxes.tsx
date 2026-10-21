@@ -7,18 +7,20 @@
 import { useRef, type ReactNode } from 'react'
 import { t } from '../../i18n'
 import { useStore, type EventKind } from '../../store'
-import { NamingBody, TutoringBody, TraitPickBody } from './bodies'
+import { NamingBody, StressBody, TutoringBody, TraitPickBody } from './bodies'
 
 const TITLE_KEYS: Record<EventKind, string> = {
   naming: 'modal.naming',
   tutoring: 'modal.tutoring',
   traitpick: 'modal.traitpick',
+  stress: 'modal.stressbreak',
 }
 
 const WIDTHS: Record<EventKind, string> = {
   naming: 'min(440px, 90vw)',
   tutoring: 'min(500px, 90vw)',
   traitpick: 'min(440px, 90vw)',
+  stress: 'min(520px, 92vw)',
 }
 
 export function EventWinBox({ kind, x, y, onClose, onMove }: {
@@ -35,7 +37,9 @@ export function EventWinBox({ kind, x, y, onClose, onMove }: {
       ? snap?.naming_queue
       : kind === 'tutoring'
         ? snap?.tutoring_queue
-        : snap?.trait_queue
+        : kind === 'stress'
+          ? snap?.stress_queue
+          : snap?.trait_queue
   const due = queue?.[0]?.due
   const daysLeft = due != null && snap ? Math.max(0, due - snap.date.ordinal) : 60
 
@@ -69,5 +73,6 @@ export function EventWinBox({ kind, x, y, onClose, onMove }: {
 function Body({ kind, shelve }: { kind: EventKind; shelve: () => void }): ReactNode {
   if (kind === 'naming') return <NamingBody shelve={shelve} />
   if (kind === 'tutoring') return <TutoringBody shelve={shelve} />
+  if (kind === 'stress') return <StressBody shelve={shelve} />
   return <TraitPickBody shelve={shelve} />
 }

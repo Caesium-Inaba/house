@@ -66,6 +66,15 @@ def handle_player_death(world: World) -> None:
         world.add_log(f"☠ {i18n.t('event.extinction')}")
         world.add_event("extinction", "event.extinction")
         return
+    # 玩家扮演角色死亡：留给前端一个必须确认的通知
+    world.death_notice = {
+        "old_id": player.id,
+        "old_name": player.name,
+        "reason": player.death_reason or "",
+        "heir_id": heir.id,
+        "heir_name": heir.name,
+        "heir_age": heir.age,
+    }
     world.player_id = heir.id
     world.head_history.append(heir.id)
     if heir.dynasty is not None and heir.dynasty in world.dynasties:

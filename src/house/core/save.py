@@ -12,7 +12,7 @@ from .models import Character, Dynasty
 from .time import Date
 from .world import World
 
-SAVE_VERSION = 5  # v5：公历日回合 + 人物生月生日 + 游戏版本/模组快照
+SAVE_VERSION = 6  # v6：压力系统（stress/decisions/last_break/崩溃队列/死亡通知）
 SAVE_DIR = Path("saves")
 
 # 旧档 log 的 emoji 前缀 -> 事件类型
@@ -83,6 +83,8 @@ def world_to_dict(world: World) -> dict:
         "naming_queue": [dict(e) for e in world.naming_queue],
         "tutoring_queue": [dict(e) for e in world.tutoring_queue],
         "trait_queue": [dict(e) for e in world.trait_queue],
+        "stress_queue": [dict(e) for e in world.stress_queue],
+        "death_notice": dict(world.death_notice) if world.death_notice else None,
         "betrothals": [dict(e) for e in world.betrothals],
     }
 
@@ -120,6 +122,9 @@ def world_from_dict(data: dict) -> World:
     )
     world.tutoring_queue = [dict(e) for e in data.get("tutoring_queue", [])]
     world.trait_queue = [dict(e) for e in data.get("trait_queue", [])]
+    world.stress_queue = [dict(e) for e in data.get("stress_queue", [])]
+    notice = data.get("death_notice")
+    world.death_notice = dict(notice) if isinstance(notice, dict) else None
     world.betrothals = [dict(e) for e in data.get("betrothals", [])]
     world.refresh_ages()
     return world

@@ -13,7 +13,8 @@ from typing import Any, Optional
 from .. import __version__
 from .. import balance as B
 from .. import i18n
-from ..core import genetics, inheritance, legacy, marriage
+from ..core import decisions as decisions_core
+from ..core import genetics, inheritance, legacy, marriage, stress as stress_core
 from ..core import traits as T
 from ..core.health import death_reason_label
 from ..core.models import Character
@@ -185,6 +186,8 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         "children_born": char.children_born,
         "pregnant": char.is_pregnant,
         "pregnancy_days_left": char.pregnancy_days if char.is_pregnant else None,
+        "stress": char.stress,
+        "stress_tier": stress_core.tier_key(char),
     }
     if player is not None:
         out["relation"] = _relation(world, player, char)
@@ -471,6 +474,7 @@ _PARAM_TRANSLATORS = {
     "education": _edu_label,
     "children": _join_names,
     "dynasty": _dynasty_label,
+    "decision": lambda v: i18n.t(f"decision.{v}.name"),
 }
 
 
@@ -484,6 +488,70 @@ def _event_text(event: dict) -> str:
         if k in params:
             params[k] = translator(params[k])
     return i18n.t(key, **params)
+
+
+
+
+def _trait_effect_summary(tid: str) -> str:
+    """把特质数值翻译成一行可读效果（崩溃选项展示用）。"""
+    data = T.TRAITS.get(tid, {})
+    parts: list[str] = []
+    for key, value in (data.get("attrs") or {}).items():
+        parts.append(f"{i18n.t(f'attr.{key}')} {value:+d}")
+    if data.get("prowess"):
+        parts.append(f"{i18n.t('attr.prowess')} {data['prowess']:+d}")
+    if data.get("health"):
+        parts.append(f"{i18n.t('stat.health')} {data['health']:+g}")
+    if data.get("fertility"):
+        parts.append(f"{i18n.t('stat.fertility')} {data['fertility']:+g}%")
+    if data.get("money_pct"):
+        parts.append(f"{i18n.t('stat.money')} {data['money_pct']:+.0%}")
+    if data.get("piety_monthly"):
+        parts.append(f"{i18n.t('stat.piety')} {data['piety_monthly']:+.1f}/月" if i18n.current_language() == "zh" else f"{i18n.t('stat.piety')} {data['piety_monthly']:+.1f}/mo")
+    if data.get("stress_loss"):
+        parts.append(f"{i18n.t('stress.loss')} {data['stress_loss']:+.0%}")
+    if data.get("stress_gain"):
+        parts.append(f"{i18n.t('stress.gain')} {data['stress_gain']:+.0%}")
+    return " · ".join(parts)
+
+
+def _stress_entries(world: World) -> list[dict]:
+    out = []
+    for entry in world.stress_queue:
+        char = world.get(entry.get("char_id"))
+        if char is None or not char.is_alive:
+            continue
+        options = []
+        for tid in entry.get("options") or []:
+            options.append(
+                {"id": tid, "name": T.trait_name(tid), "summary": _trait_effect_summary(tid)}
+            )
+        out.append(
+            {
+                "char_id": char.id,
+                "name": display_name(world, char),
+                "age": char.age,
+                "level": entry.get("level", 1),
+                "stress": char.stress,
+                "due": entry.get("due"),
+                "options": options,
+            }
+        )
+    return out
+
+
+def _death_notice(world: World) -> Optional[dict]:
+    notice = world.death_notice
+    if not notice:
+        return None
+    reason = str(notice.get("reason") or "")
+    label = i18n.t(f"death.{reason}")
+    return {
+        "old_name": notice.get("old_name") or "",
+        "reason": label if label != f"death.{reason}" else reason,
+        "heir_name": notice.get("heir_name") or "",
+        "heir_age": notice.get("heir_age"),
+    }
 
 
 def build_snapshot(world: World) -> dict:
@@ -516,6 +584,9 @@ def build_snapshot(world: World) -> dict:
         "naming_queue": _naming_entries(world),
         "tutoring_queue": _tutoring_entries(world),
         "trait_queue": _traitpick_entries(world),
+        "stress_queue": _stress_entries(world),
+        "decision_options": decisions_core.list_for(world, player) if player is not None else [],
+        "death_notice": _death_notice(world),
         "legacies": _legacies_payload(world),
         "population": {
             "alive": len(alive),
@@ -542,6 +613,17 @@ def build_snapshot(world: World) -> dict:
             "start_year": B.START_YEAR,
             "game_version": __version__,
             "language": i18n.current_language(),
+            "stress_tiers": [
+                {
+                    "min": 0 if level == 0 else B.STRESS_TIER_THRESHOLDS[level - 1],
+                    "key": stress_core.TIER_KEYS[level],
+                    "label": i18n.t(f"stress.tier.{stress_core.TIER_KEYS[level]}"),
+                    "fertility": B.STRESS_FERTILITY_MULT[level],
+                    "health": B.STRESS_HEALTH_PENALTY[level],
+                }
+                for level in range(4)
+            ],
+            "max_stress": B.STRESS_MAX,
             "save_version": _save_version(),
             "active_mods": _active_mods(),
             "cultures": {c: i18n.t(f"culture.{c}") for c in ("czech", "polish", "hungarian", "german")},

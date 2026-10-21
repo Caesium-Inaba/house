@@ -75,6 +75,7 @@ EDUCATION: dict[str, Any] = {}
 CHILDHOOD: dict[str, dict] = {}
 PERSONALITY_IDS: list[str] = []
 CHILDHOOD_IDS: list[str] = []
+COPING_IDS: list[str] = []
 
 
 def _rebuild_all() -> None:
@@ -91,6 +92,7 @@ def _rebuild_all() -> None:
     CHILDHOOD.update(raw.get("childhood", {}))
     PERSONALITY_IDS[:] = list(PERSONALITY)
     CHILDHOOD_IDS[:] = [k for k in CHILDHOOD if not k.startswith("_")]
+    COPING_IDS[:] = [tid for tid, d in TRAITS.items() if d.get("coping")]
 
 
 _rebuild_all()
