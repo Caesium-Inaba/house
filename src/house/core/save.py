@@ -12,7 +12,7 @@ from .models import Character, Dynasty
 from .time import Date
 from .world import World
 
-SAVE_VERSION = 6  # v6：压力系统（stress/decisions/last_break/崩溃队列/死亡通知）
+SAVE_VERSION = 7  # v7：宝物系统（artifacts/equipped/next_artifact_uid）
 SAVE_DIR = Path("saves")
 
 # 旧档 log 的 emoji 前缀 -> 事件类型
@@ -71,6 +71,7 @@ def world_to_dict(world: World) -> dict:
         "player_id": world.player_id,
         "next_char_id": world.next_char_id,
         "next_dynasty_id": world.next_dynasty_id,
+        "next_artifact_uid": world.next_artifact_uid,
         "gender_law": world.gender_law,
         "over": world.over,
         "over_reason": world.over_reason,
@@ -99,6 +100,7 @@ def world_from_dict(data: dict) -> World:
     world.player_id = data.get("player_id")
     world.next_char_id = data.get("next_char_id", 1)
     world.next_dynasty_id = data.get("next_dynasty_id", 1)
+    world.next_artifact_uid = data.get("next_artifact_uid", 1)
     world.gender_law = data.get("gender_law", "male_preference")
     world.over = data.get("over", False)
     world.over_reason = data.get("over_reason", "")

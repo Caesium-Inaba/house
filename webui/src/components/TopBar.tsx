@@ -7,6 +7,7 @@ import { api } from '../api/client'
 import { runAction } from '../store'
 import { Crest } from '../heraldry'
 import { t } from '../i18n'
+import { SHOW_MANUAL_TICK } from '../featureFlags'
 import { IconAuto, IconPause, IconTree } from '../icons'
 
 const SPEED_MARKS = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ']
@@ -72,7 +73,7 @@ export default function TopBar() {
           title={t('top.auto_hint')}
         >
           {auto ? <IconPause /> : <IconAuto />}
-          {auto ? t('top.stop') : t('top.auto')}
+          {auto ? t('top.pause') : t('top.start')}
           <kbd>{t('top.space')}</kbd>
         </button>
         {/* 流速五档 */}
@@ -87,15 +88,21 @@ export default function TopBar() {
             </button>
           ))}
         </div>
-        <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('day')}>
-          {t('top.tick_day')}
-        </button>
-        <button className="btn" disabled={!canTick || busy} onClick={() => tickTime('month')}>
-          {t('top.tick_month')}
-        </button>
-        <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('year')}>
-          {t('top.tick_year')} <kbd>Y</kbd>
-        </button>
+        {/* 手动推进（推一日/推一月/推一年）已从 UI 移除，只保留开始/暂停；
+            实现与 i18n 键仍保留，SHOW_MANUAL_TICK 置 true 可恢复入口。 */}
+        {SHOW_MANUAL_TICK && (
+          <>
+            <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('day')}>
+              {t('top.tick_day')}
+            </button>
+            <button className="btn" disabled={!canTick || busy} onClick={() => tickTime('month')}>
+              {t('top.tick_month')}
+            </button>
+            <button className="btn primary" disabled={!canTick || busy} onClick={() => tickTime('year')}>
+              {t('top.tick_year')} <kbd>Y</kbd>
+            </button>
+          </>
+        )}
         <button
           className="btn"
           onClick={() => setTreeOpen(!treeOpen)}

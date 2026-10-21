@@ -1,0 +1,13 @@
+{
+ "decisions.group.artifact": "计生用具",
+ "artifact.condom.name": "避孕套",
+ "artifact.condom.desc": "薄羊肠所制，阻隔孕育。一经使用即耗损，来年便需更换。",
+ "artifact.incense.name": "暖情香",
+ "artifact.incense.desc": "点燃后满室生春，助长情欲与子嗣，却也催人衰老；忠贞者闻之，心绪更难平静。",
+ "decision.buy_condom.name": "购置避孕套",
+ "decision.buy_incense.name": "购置暖情香",
+ "artifact.effect.fertility": "生育",
+ "artifact.effect.health_decay": "健康流逝",
+ "artifact.effect.stress_gain": "压力增益",
+ "artifact.effect.gift_stress": "赠予{relation}（{trait}）时，其压力 −{n}"
+}

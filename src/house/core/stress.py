@@ -18,6 +18,7 @@ from typing import Optional
 
 from .. import balance as B
 from .. import i18n
+from . import artifacts
 from . import traits as T
 from .models import Character
 from .world import World
@@ -51,7 +52,7 @@ def coping_traits(char: Character) -> list[str]:
 
 def gain_multiplier(char: Character) -> float:
     total = sum(T.TRAITS.get(tid, {}).get("stress_gain", 0.0) for tid in char.traits)
-    return max(0.25, 1.0 + total)
+    return max(0.25, (1.0 + total) * artifacts.stress_gain_multiplier(char))
 
 
 def loss_multiplier(char: Character) -> float:

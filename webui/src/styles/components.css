@@ -988,6 +988,149 @@
   border-top: 1px dashed var(--edge);
 }
 
+.mini-pencil {
+  padding: 1px 6px !important;
+  font-size: 12px !important;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  flex: 0 0 auto;
+}
+
+/* 亲属区 */
+.kin-head {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin: 2px 0 6px;
+}
+
+.kin-head b {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.kin-group {
+  margin-bottom: 6px;
+}
+
+.kin-label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+}
+
+.kin-chip {
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.kin-chip:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold-bright);
+}
+
+.kin-chip.dead {
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-faint);
+}
+
+.kin-none {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+/* 宝物 */
+.artifact-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--edge);
+}
+
+.artifact-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.artifact-worn {
+  font-size: 10px;
+  color: var(--verdant);
+  border: 1px solid rgba(107, 143, 99, 0.5);
+  border-radius: 3px;
+  padding: 0 4px;
+  letter-spacing: 0.08em;
+}
+
+.artifact-meta {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.artifact-effect {
+  font-size: 11.5px;
+  color: var(--steel);
+  margin-top: 2px;
+}
+
+.artifact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: flex-start;
+}
+
+.artifact-actions .btn {
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+}
+
+.artifact-gift {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.artifact-gift select {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.artifact-gift .btn {
+  padding: 3px 10px !important;
+  font-size: 11.5px !important;
+}
+
+/* 监护管理 */
+.guardian-box {
+  margin-top: 6px;
+  padding: 7px 8px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guardian-current {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.guardian-current b {
+  color: var(--ink);
+}
+
 /* ── 事件浮窗（非模态：无遮罩、可拖拽、时间不停） ── */
 .event-win {
   position: fixed;

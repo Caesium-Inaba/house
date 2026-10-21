@@ -1,42 +1,24 @@
-"""减压决议（CK3）：通用活动 + 应对机制专属动作，全部带冷却（按绝对日序号）。
+"""减压决议（CK3）：数据驱动（data/decisions.json，模组可按键新增/覆盖）。
 
-数值来源：CK3 Character_decisions#Coping_actions（应对动作 3 年 CD、减压 −20/−40），
-通用活动（狩猎/宴饮/朝圣/静修）为适配本作添加，冷却与花费在 balance/本文件标注采定。
+数值来源：CK3 Character_decisions#Coping_actions（应对动作 3 年 CD、减压 −20/−40）；
+通用活动（狩猎/宴饮/朝圣/静修）为适配本作添加。效果字段：
+stress / cost / gain / health / opinion_all / requires / cd / buy_artifact。
 """
 
 from __future__ import annotations
 
-from .. import balance as B
 from .. import i18n
 from . import opinion
 from . import stress
+from . import traits as T
 from .models import Character
 from .world import World
 
-# cost/gain 的键：money / prestige / piety
-DECISIONS: list[dict] = [
-    # ── 通用 ──
-    {"id": "hunt", "group": "generic", "stress": 25, "cost": {"money": 30}, "gain": {"prestige": 10}, "cd": 365},
-    {"id": "feast", "group": "generic", "stress": 40, "cost": {"money": 50, "prestige": 20}, "cd": 730},
-    {"id": "pilgrimage", "group": "generic", "stress": 30, "cost": {"money": 40}, "gain": {"piety": 25}, "cd": 1095},
-    {"id": "meditate", "group": "generic", "stress": 10, "cd": 180},
-    # ── 应对机制（trait 解锁，3 年 CD） ──
-    {"id": "coping_drink", "group": "coping", "requires": "drunkard", "stress": 20, "cost": {"prestige": 150}, "cd": 1095},
-    {"id": "coping_food", "group": "coping", "requires": "comfort_eater", "stress": 20, "cost": {"money": 20}, "cd": 1095},
-    {"id": "coping_seclude", "group": "coping", "requires": "reclusive", "stress": 20, "cost": {"prestige": 150}, "cd": 1095},
-    {"id": "coping_confide", "group": "coping", "requires": "confider", "stress": 20, "opinion_all": -5, "cd": 1095},
-    {"id": "coping_workout", "group": "coping", "requires": "athletic", "stress": 20, "opinion_all": -5, "cd": 1095},
-    {"id": "coping_flagellate", "group": "coping", "requires": "flagellant", "stress": 40, "health": -0.2, "cd": 1095},
-    {"id": "coping_lash_out", "group": "coping", "requires": "irritable", "stress": 20, "opinion_all": -5, "cd": 1095},
-    {"id": "coping_confess", "group": "coping", "requires": "contrite", "stress": 20, "gain": {"piety": 10}, "cd": 1095},
-    {"id": "coping_shun_food", "group": "coping", "requires": "inappetetic", "stress": 20, "cd": 1095},
-    {"id": "coping_charity", "group": "coping", "requires": "improvident", "stress": 20, "cost": {"money": 20}, "gain": {"piety": 25}, "cd": 1095},
-    {"id": "coping_brothel", "group": "coping", "requires": "rakish", "stress": 20, "cost": {"money": 25}, "cd": 1095},
-    {"id": "coping_market", "group": "coping", "requires": "profligate", "stress": 20, "cd": 1095},
-    {"id": "coping_journal", "group": "coping", "requires": "journaller", "stress": 20, "cd": 1095},
-]
 
-_BY_ID = {d["id"]: d for d in DECISIONS}
+def all_decisions() -> dict[str, dict]:
+    """读取决议定义（随 traits.load_json 的缓存/模组合并自动更新）。"""
+    data = T.load_json("decisions.json")
+    return dict(data.get("decisions", {})) if isinstance(data, dict) else {}
 
 
 def _affordable(char: Character, cost: dict) -> bool:
@@ -50,7 +32,8 @@ def list_for(world: World, char: Character) -> list[dict]:
     """返回该角色可用的决议清单（含不可用原因）。"""
     today = world.date.ordinal()
     out = []
-    for d in DECISIONS:
+    for decision_id, d in all_decisions().items():
+        d = dict(d, id=decision_id)
         requires = d.get("requires")
         owned = requires is None or requires in char.traits
         ready_at = char.decisions.get(d["id"])
@@ -64,7 +47,7 @@ def list_for(world: World, char: Character) -> list[dict]:
             reason = "cost"
         out.append(
             {
-                "id": d["id"],
+                "id": decision_id,
                 "group": d["group"],
                 "stress": d["stress"],
                 "cost": d.get("cost", {}),
@@ -81,7 +64,7 @@ def list_for(world: World, char: Character) -> list[dict]:
 
 def apply(world: World, char: Character, decision_id: str) -> tuple[bool, str]:
     """执行决议；返回 (成功, 消息 key)。"""
-    d = _BY_ID.get(decision_id)
+    d = all_decisions().get(decision_id)
     if d is None:
         return False, "api.unknown_decision"
     if not char.is_alive:
@@ -94,6 +77,11 @@ def apply(world: World, char: Character, decision_id: str) -> tuple[bool, str]:
         return False, "api.decision_cd"
     if not _affordable(char, d.get("cost", {})):
         return False, "api.decision_cost"
+    if d.get("buy_artifact"):
+        from . import artifacts
+
+        if artifacts.definition(d["buy_artifact"]) is None:
+            return False, "api.artifact_missing"
 
     for key, amount in d.get("cost", {}).items():
         setattr(char, key, getattr(char, key) - amount)
@@ -106,9 +94,14 @@ def apply(world: World, char: Character, decision_id: str) -> tuple[bool, str]:
         for other in world.alive():
             if other.id != char.id:
                 opinion.add_opinion(char, other.id, d["opinion_all"])
+    if d.get("buy_artifact"):
+        from . import artifacts
+
+        artifacts.acquire(world, char, d["buy_artifact"])
     char.decisions[decision_id] = today + d["cd"]
 
     params = {"name": char.name, "decision": decision_id, "stress": reduced}
-    world.add_log(f"☘ {i18n.t('event.decision', **params)}")
-    world.add_event("decision", "event.decision", params, [char.id])
+    key = "event.decision" if reduced > 0 else "event.decision_plain"
+    world.add_log(f"☘ {i18n.t(key, **params)}")
+    world.add_event("decision", key, params, [char.id])
     return True, "api.decision_done"

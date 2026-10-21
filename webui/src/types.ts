@@ -73,6 +73,23 @@ export interface CharacterInfo {
   sexuality_label: string
   opinion_of_player: number | null
   player_opinion: number | null
+  artifacts: ArtifactInfo[]
+}
+
+export interface ArtifactInfo {
+  uid: number
+  def: string
+  name: string
+  desc: string
+  slot: string
+  slot_label: string
+  rarity: string
+  rarity_label: string
+  durability: number
+  max_durability: number
+  equipped: boolean
+  reforgeable: boolean
+  effect_summary: string
 }
 
 export interface EventInfo {
@@ -246,6 +263,7 @@ export interface ApiResponse {
 export interface LauncherModInfo {
   folder: string
   name: string
+  name_en: string
   version: string
   supported_version: string
   tags: string[]
@@ -275,11 +293,14 @@ export interface StressEntry {
 
 export interface DecisionOption {
   id: string
-  group: 'generic' | 'coping'
+  group: string
+  name: string
+  group_label: string
   stress: number
   cost: Record<string, number>
   gain: Record<string, number>
   requires: string | null
+  requires_name: string | null
   cd: number
   cd_left: number
   available: boolean

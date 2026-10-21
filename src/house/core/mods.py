@@ -30,6 +30,7 @@ CONFIG_NAME = "launcher.json"
 class ModInfo:
     folder: str
     name: str = ""
+    name_en: str = ""
     version: str = ""
     supported_version: str = ""
     tags: list[str] = field(default_factory=list)
@@ -87,6 +88,7 @@ def scan(base: pathlib.Path | None = None) -> list[ModInfo]:
         try:
             desc = json.loads((root / folder / "mod.json").read_text(encoding="utf-8"))
             info.name = str(desc.get("name") or folder)
+            info.name_en = str(desc.get("name_en") or "")
             info.version = str(desc.get("version") or "")
             info.supported_version = str(desc.get("supported_version") or "")
             tags = desc.get("tags")

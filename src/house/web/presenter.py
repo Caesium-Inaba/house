@@ -13,6 +13,7 @@ from typing import Any, Optional
 from .. import __version__
 from .. import balance as B
 from .. import i18n
+from ..core import artifacts as artifacts_core
 from ..core import decisions as decisions_core
 from ..core import genetics, inheritance, legacy, marriage, stress as stress_core
 from ..core import traits as T
@@ -188,6 +189,7 @@ def enrich_character(world: World, char: Character, player: Optional[Character])
         "pregnancy_days_left": char.pregnancy_days if char.is_pregnant else None,
         "stress": char.stress,
         "stress_tier": stress_core.tier_key(char),
+        "artifacts": _artifact_list(char),
     }
     if player is not None:
         out["relation"] = _relation(world, player, char)
@@ -475,6 +477,7 @@ _PARAM_TRANSLATORS = {
     "children": _join_names,
     "dynasty": _dynasty_label,
     "decision": lambda v: i18n.t(f"decision.{v}.name"),
+    "artifact": lambda v: _artifact_label(v),
 }
 
 
@@ -554,6 +557,81 @@ def _death_notice(world: World) -> Optional[dict]:
     }
 
 
+
+
+def _artifact_label(def_id: str) -> str:
+    key = f"artifact.{def_id}.name"
+    name = i18n.t(key)
+    return name if name != key else str(def_id)
+
+
+def _artifact_effect_summary(def_id: str) -> str:
+    """宝物效果摘要（供人物栏展示）。"""
+    d = artifacts_core.definition(def_id) or {}
+    mods = d.get("modifiers") or {}
+    parts: list[str] = []
+    if mods.get("fertility_mult"):
+        parts.append(f"{i18n.t('artifact.effect.fertility')} {mods['fertility_mult']:+.0%}")
+    if mods.get("health_decay_mult"):
+        parts.append(f"{i18n.t('artifact.effect.health_decay')} ×{mods['health_decay_mult']:g}")
+    if mods.get("stress_gain_mult"):
+        label = i18n.t("artifact.effect.stress_gain")
+        need = mods.get("stress_gain_mult_trait")
+        if need:
+            label += i18n.t("artifact.effect.trait_suffix", trait=T.trait_name(need))
+        parts.append(f"{label} ×{mods['stress_gain_mult']:g}")
+    gift = d.get("gift_effect") or {}
+    if gift.get("stress"):
+        parts.append(
+            i18n.t(
+                "artifact.effect.gift_stress",
+                relation=i18n.t("relation.spouse") if gift.get("relation") == "spouse" else "",
+                trait=T.trait_name(gift.get("trait")) if gift.get("trait") else "",
+                n=abs(int(gift["stress"])),
+            )
+        )
+    return " · ".join(parts)
+
+
+def _artifact_list(char: Character) -> list[dict]:
+    out = []
+    for inst in char.artifacts:
+        def_id = inst.get("def", "")
+        d = artifacts_core.definition(def_id) or {}
+        slot = artifacts_core.slot_of(def_id)
+        rarity = artifacts_core.rarity_of(def_id)
+        out.append(
+            {
+                "uid": inst.get("uid"),
+                "def": def_id,
+                "name": _artifact_label(def_id),
+                "desc": i18n.t(f"artifact.{def_id}.desc"),
+                "slot": slot,
+                "slot_label": i18n.t(f"artifact.slot.{slot}"),
+                "rarity": rarity,
+                "rarity_label": i18n.t(f"artifact.rarity.{rarity}"),
+                "durability": inst.get("durability", 0),
+                "max_durability": artifacts_core.max_durability(def_id),
+                "equipped": char.equipped.get(slot) == inst.get("uid"),
+                "reforgeable": bool(d.get("reforgeable", True)),
+                "effect_summary": _artifact_effect_summary(def_id),
+            }
+        )
+    return out
+
+
+def _decision_options(world: World, player: Character) -> list[dict]:
+    """决议清单：补上按当前语言的名称与分组标签（模组可通过语言包覆盖）。"""
+    out = []
+    for opt in decisions_core.list_for(world, player):
+        item = dict(opt)
+        item["name"] = i18n.t(f"decision.{opt['id']}.name")
+        item["group_label"] = i18n.t(f"decisions.group.{opt['group']}")
+        item["requires_name"] = T.trait_name(opt["requires"]) if opt.get("requires") else None
+        out.append(item)
+    return out
+
+
 def build_snapshot(world: World) -> dict:
     player = world.player
     alive = world.alive()
@@ -585,7 +663,7 @@ def build_snapshot(world: World) -> dict:
         "tutoring_queue": _tutoring_entries(world),
         "trait_queue": _traitpick_entries(world),
         "stress_queue": _stress_entries(world),
-        "decision_options": decisions_core.list_for(world, player) if player is not None else [],
+        "decision_options": _decision_options(world, player) if player is not None else [],
         "death_notice": _death_notice(world),
         "legacies": _legacies_payload(world),
         "population": {

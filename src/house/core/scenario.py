@@ -188,7 +188,8 @@ def build_default_world(seed: Optional[int] = None) -> World:
            education="edu_learning_3", personality={"chaste", "content"})
 
     world.refresh_ages()
-    world.add_log(f"1066年1月1日：{i18n.t('event.scenario_start')}")
-    world.add_event("succession", "event.scenario_start", {}, [vratislav.id])
+    start_params = {"name": vratislav.name, "dynasty": premyslid.name}
+    world.add_log(f"1066年1月1日：{i18n.t('event.scenario_start', **start_params)}")
+    world.add_event("succession", "event.scenario_start", start_params, [vratislav.id])
     world.head_history.append(vratislav.id)
     return world

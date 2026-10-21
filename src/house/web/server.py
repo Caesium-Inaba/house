@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from .. import VERSION_NAME, VERSION_NAME_EN, __version__
 from .. import balance as B
 from .. import i18n
+from ..core import artifacts as artifacts_core
 from ..core import decisions as decisions_core
 from ..core import genetics, health, legacy, marriage, mods as mods_core, save, sim, stress as stress_core
 from ..core import traits as T
@@ -114,6 +115,28 @@ class NoticeDismissBody(BaseModel):
 class DebugStressBody(BaseModel):
     target_id: int
     amount: int = 50
+
+
+class ArtifactBody(BaseModel):
+    uid: int
+
+
+class ArtifactGiftBody(BaseModel):
+    uid: int
+    target_id: int
+
+
+class GuardianBody(BaseModel):
+    child_id: int
+    guardian_id: Optional[int] = None
+
+
+class SelfRenameBody(BaseModel):
+    name: str
+
+
+class DynastyRenameBody(BaseModel):
+    name: str
 
 
 def _dist_dir() -> Optional[Path]:
@@ -433,6 +456,106 @@ def create_app(dev: bool = False, open_browser: Optional[str] = None, debug: boo
         w = world()
         stress_core.add_stress(w, body.target_id, body.amount, "debug")
         return {"ok": True, "message": None, "state": snap()}
+
+    # ── 宝物 ──
+
+    def _player_char(w: World):
+        player = w.player
+        if player is None or not player.is_alive:
+            raise HTTPException(400, i18n.t("api.no_living_head"))
+        return player
+
+    @app.post("/api/artifact/equip")
+    async def artifact_equip(body: ArtifactBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        ok = artifacts_core.equip(w, player, body.uid)
+        return {"ok": ok, "message": i18n.t("api.artifact_equipped" if ok else "api.artifact_missing"), "state": snap()}
+
+    @app.post("/api/artifact/unequip")
+    async def artifact_unequip(body: ArtifactBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        ok = artifacts_core.unequip(w, player, body.uid)
+        return {"ok": ok, "message": i18n.t("api.artifact_unequipped" if ok else "api.artifact_missing"), "state": snap()}
+
+    @app.post("/api/artifact/destroy")
+    async def artifact_destroy(body: ArtifactBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        ok, _gold = artifacts_core.destroy(w, player, body.uid)
+        return {"ok": ok, "message": i18n.t("api.artifact_destroyed" if ok else "api.artifact_missing"), "state": snap()}
+
+    @app.post("/api/artifact/reforge")
+    async def artifact_reforge(body: ArtifactBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        ok, key = artifacts_core.reforge(w, player, body.uid)
+        return {"ok": ok, "message": i18n.t(key), "state": snap()}
+
+    @app.post("/api/artifact/gift")
+    async def artifact_gift(body: ArtifactGiftBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        target = w.get(body.target_id)
+        if target is None:
+            raise HTTPException(400, i18n.t("api.no_such_person"))
+        ok, key = artifacts_core.gift(w, player, target, body.uid)
+        return {"ok": ok, "message": i18n.t(key), "state": snap()}
+
+    # ── 监护关系（家主可随时指定/更换/解除） ──
+
+    @app.post("/api/guardian")
+    async def set_guardian(body: GuardianBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        child = w.get(body.child_id)
+        if child is None or not child.is_alive:
+            raise HTTPException(400, i18n.t("api.invalid_child"))
+        if child.id == player.id or child.age >= B.CHILDHOOD_END or child.dynasty != player.dynasty:
+            raise HTTPException(400, i18n.t("api.guardian_child_invalid"))
+        if body.guardian_id is None:
+            child.guardian = None
+            return {"ok": True, "message": i18n.t("api.guardian_cleared"), "state": snap()}
+        guardian = w.get(body.guardian_id)
+        if (
+            guardian is None
+            or not guardian.is_alive
+            or guardian.age < B.CHILDHOOD_END
+            or guardian.dynasty != player.dynasty
+            or guardian.id == child.id
+        ):
+            raise HTTPException(400, i18n.t("api.guardian_invalid"))
+        child.guardian = guardian.id
+        message = i18n.t("api.guardian_set", child=child.name, guardian=guardian.name)
+        return {"ok": True, "message": message, "state": snap()}
+
+    # ── 改名：玩家自己（任意年龄）与宗族（家主） ──
+
+    @app.post("/api/rename_self")
+    async def rename_self(body: SelfRenameBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        name = body.name.strip()[:12]
+        if not name:
+            raise HTTPException(400, i18n.t("api.name_empty"))
+        w.rename_character(player.id, name)
+        return {"ok": True, "message": i18n.t("api.renamed", name=name), "state": snap()}
+
+    @app.post("/api/dynasty/rename")
+    async def rename_dynasty(body: DynastyRenameBody) -> dict:
+        w = world()
+        player = _player_char(w)
+        if player.dynasty is None:
+            raise HTTPException(400, i18n.t("api.no_dynasty"))
+        dyn = w.dynasties.get(player.dynasty)
+        if dyn is None or dyn.head != player.id:
+            raise HTTPException(400, i18n.t("api.rename_dynasty_forbidden"))
+        name = body.name.strip()[:16]
+        if not name:
+            raise HTTPException(400, i18n.t("api.name_empty"))
+        w.rename_dynasty(player.dynasty, name)
+        return {"ok": True, "message": i18n.t("api.dynasty_renamed", name=name), "state": snap()}
 
     @app.post("/api/settings")
     async def update_settings(body: SettingsBody) -> dict:

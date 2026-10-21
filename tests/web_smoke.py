@@ -57,7 +57,7 @@ def main() -> None:
     assert res["ok"] and res["restart_required"] is False
     en_label = res["state"]["date"]["label"]
     assert "1966" not in en_label and ("January" in en_label or en_label.endswith("1066")), en_label
-    assert any("Vratislaus becomes" in e["text"] for e in res["state"]["events"]), res["state"]["events"][:2]
+    assert any("becomes head of House Přemyslid" in e["text"] for e in res["state"]["events"]), res["state"]["events"][:2]
     r = client.post("/api/settings", json={"language": "zh"})
     assert any("弗拉季斯拉夫成为" in e["text"] for e in r.json()["state"]["events"])
     print("[i18n] OK  快照与历史事件随语言切换")
@@ -310,6 +310,90 @@ def main() -> None:
     r = client.get("/api/launcher")
     assert r.json()["started"] is True, "推旬后应视为已开局"
     print("[launcher start] OK  空清单开局正常，started 判定可以随进度发生")
+
+    # ── 模组「计划生育」：宝物购买/装备/赠予/销毁 + 监护/改名 ──
+    import pathlib as _pl
+    import shutil as _sh
+    repo = _pl.Path(__file__).resolve().parent.parent
+    _pl.Path("mods").mkdir(exist_ok=True)
+    _sh.copytree(repo / "mods" / "perfect-f-word", _pl.Path("mods") / "perfect-f-word")
+    r = client.post("/api/launcher/start", json={"enabled": ["perfect-f-word"]})
+    assert r.json()["ok"], r.text
+    snap = r.json()["state"]
+    opts = {o["id"]: o for o in snap["decision_options"]}
+    assert "buy_condom" in opts and "buy_incense" in opts, opts.keys()
+    assert opts["buy_condom"]["name"] == "购置避孕套", opts["buy_condom"]
+    assert opts["buy_condom"]["group_label"] == "计生用具", opts["buy_condom"]
+    money0 = next(c for c in snap["characters"] if c["id"] == snap["player_id"])["money"]
+
+    r = client.post("/api/decision", json={"id": "buy_condom"})
+    assert r.json()["ok"], r.text
+    snap = r.json()["state"]
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    assert me["money"] == money0 - 10
+    condom = next(a for a in me["artifacts"] if a["def"] == "condom")
+    assert condom["equipped"] and condom["slot"] == "armor" and condom["durability"] == 1
+    assert condom["name"] == "避孕套"
+
+    r = client.post("/api/decision", json={"id": "buy_incense"})
+    snap = r.json()["state"]
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    incense = next(a for a in me["artifacts"] if a["def"] == "incense")
+    assert not incense["equipped"], "同槽不应自动替换"
+    r = client.post("/api/artifact/equip", json={"uid": incense["uid"]})
+    snap = r.json()["state"]
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    worn = [a for a in me["artifacts"] if a["equipped"]]
+    assert len(worn) == 1 and worn[0]["def"] == "incense", worn
+
+    spouse_id = me["spouse"]
+    r = client.post("/api/artifact/gift", json={"uid": condom["uid"], "target_id": spouse_id})
+    assert r.json()["ok"], r.text
+    snap = r.json()["state"]
+    sp = next(c for c in snap["characters"] if c["id"] == spouse_id)
+    assert any(a["def"] == "condom" for a in sp["artifacts"]), sp["artifacts"]
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    assert not any(a["uid"] == condom["uid"] for a in me["artifacts"])
+
+    money1 = me["money"]
+    r = client.post("/api/artifact/destroy", json={"uid": incense["uid"]})
+    assert r.json()["ok"], r.text
+    snap = r.json()["state"]
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    assert not any(a["uid"] == incense["uid"] for a in me["artifacts"])
+    assert me["money"] == money1, "模组宝物销毁不返金"
+    print("[artifacts api] OK  购买/装备槽位/赠予/销毁不返金")
+
+    # 监护：家主指定 → 更换 → 解除
+    me = next(c for c in snap["characters"] if c["id"] == snap["player_id"])
+    child = next(c for c in snap["characters"] if c["father"] == me["id"] and not c["is_adult"] and c["alive"])
+    guardian = next(c for c in snap["characters"]
+                    if c["alive"] and c["is_adult"] and c["dynasty"] == me["dynasty"] and c["id"] != child["id"])
+    r = client.post("/api/guardian", json={"child_id": child["id"], "guardian_id": guardian["id"]})
+    assert r.json()["ok"], r.text
+    snap = r.json()["state"]
+    got = next(c for c in snap["characters"] if c["id"] == child["id"])
+    assert got["guardian"] == guardian["id"]
+    r = client.post("/api/guardian", json={"child_id": child["id"], "guardian_id": None})
+    assert r.json()["ok"], r.text
+    got = next(c for c in r.json()["state"]["characters"] if c["id"] == child["id"])
+    assert got["guardian"] is None
+    r = client.post("/api/guardian", json={"child_id": child["id"], "guardian_id": child["id"]})
+    assert r.status_code == 400, "不能指定自己为监护人"
+    print("[guardian api] OK  指定/解除/非法目标拒绝")
+
+    # 改名：自己任意年龄；家主改宗族名
+    r = client.post("/api/rename_self", json={"name": "新名测试"})
+    assert r.json()["ok"], r.text
+    assert r.json()["state"]["characters"][0]["name"] == "新名测试"
+    r = client.post("/api/dynasty/rename", json={"name": "试验王朝"})
+    assert r.json()["ok"], r.text
+    assert any(d["name"] == "试验王朝" for d in r.json()["state"]["dynasties"])
+    print("[rename api] OK  自己/宗族改名")
+
+    # 关闭模组，回到原版世界
+    r = client.post("/api/launcher/start", json={"enabled": []})
+    assert r.json()["ok"], r.text
 
     # ── 调试杀人：默认关闭 ──
     r = client.post("/api/debug/kill", json={"target_id": 999})

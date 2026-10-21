@@ -1,0 +1,4 @@
+{
+  "_comment": "宝物定义（正式版为空——宝物全部来自模组）。字段：slot/rarity/durability?/reforgeable/destroy_gold?/modifiers{gift_effect?}。名称与描述走 localization 的 artifact.<id>.name/.desc。",
+  "artifacts": {}
+}

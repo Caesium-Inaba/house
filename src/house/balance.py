@@ -58,6 +58,17 @@ CHILDBED_EXP_MULT: list[tuple[int, float]] = [
     (4, 0.5), (3, 0.6), (2, 0.75), (0, 1.0),
 ]   # (已产数下界, 乘数)
 
+# ── 宝物（CK3 Artifacts：稀有度决定耐久/维修/销毁返金） ──
+ARTIFACT_SLOTS = ("weapon", "armor", "regalia", "trinket")
+ARTIFACT_RARITIES: dict[str, dict] = {
+    "common": {"durability": 60, "destroy_gold": 40, "reforge_cost": 65},
+    "masterwork": {"durability": 75, "destroy_gold": 80, "reforge_cost": 125},
+    "famed": {"durability": 100, "destroy_gold": 150, "reforge_cost": 250},
+    "illustrious": {"durability": 150, "destroy_gold": 250, "reforge_cost": 625},
+}
+ARTIFACT_DURABILITY_YEARLY = 1            # CK3：每件宝物每年损失 1 点耐久
+ARTIFACT_INHERIT_STRANGER_LOSS = 10       # 非近亲继承时的额外耐久损失（CK3）
+
 # ── 压力（CK3 1.20 wiki：0-400；100/200/300 三档；400 强制崩溃） ──
 STRESS_MAX = 400
 STRESS_TIER_THRESHOLDS = (100, 200, 300)

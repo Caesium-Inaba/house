@@ -1,0 +1,18 @@
+{
+  "decisions": {
+    "buy_condom": {
+      "group": "artifact",
+      "stress": 0,
+      "cost": {"money": 10},
+      "cd": 0,
+      "buy_artifact": "condom"
+    },
+    "buy_incense": {
+      "group": "artifact",
+      "stress": 0,
+      "cost": {"money": 10},
+      "cd": 0,
+      "buy_artifact": "incense"
+    }
+  }
+}

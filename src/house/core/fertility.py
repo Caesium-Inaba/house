@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .. import balance as B
 from .. import i18n
+from . import artifacts
 from . import genetics
 from . import legacy
 from . import stress
@@ -49,6 +50,7 @@ def effective_fertility(world: World, char: Character) -> float:
         * age_multiplier(world, char)
         * (1.0 + fm.get("fertility_mult", 0.0))
         * stress.fertility_multiplier(char)
+        * artifacts.fertility_multiplier(char)
     )
 
 

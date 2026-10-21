@@ -49,6 +49,10 @@ class Character:
     prestige: float = 0.0
     piety: float = 0.0
 
+    # ── 宝物（CK3 artifacts；实例 {uid, def, durability}） ──
+    artifacts: list[dict] = field(default_factory=list)
+    equipped: dict[str, int] = field(default_factory=dict)  # 槽位 -> 宝物 uid
+
     # ── 压力（CK3） ──
     stress: int = 0
     decisions: dict[str, int] = field(default_factory=dict)  # 决议 id -> 可再次使用的日序号
@@ -130,6 +134,8 @@ class Character:
             "money": self.money,
             "prestige": self.prestige,
             "piety": self.piety,
+            "artifacts": [dict(a) for a in self.artifacts],
+            "equipped": {k: int(v) for k, v in self.equipped.items()},
             "stress": self.stress,
             "decisions": {k: int(v) for k, v in self.decisions.items()},
             "last_break_ordinal": self.last_break_ordinal,
@@ -171,6 +177,8 @@ class Character:
             money=data.get("money", 0.0),
             prestige=data.get("prestige", 0.0),
             piety=data.get("piety", 0.0),
+            artifacts=[dict(a) for a in data.get("artifacts", [])],
+            equipped={str(k): int(v) for k, v in data.get("equipped", {}).items()},
             stress=int(data.get("stress", 0)),
             decisions={str(k): int(v) for k, v in data.get("decisions", {}).items()},
             last_break_ordinal=data.get("last_break_ordinal"),

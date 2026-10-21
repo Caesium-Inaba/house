@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "condom": {
+      "slot": "armor",
+      "rarity": "common",
+      "durability": 1,
+      "reforgeable": false,
+      "destroy_gold": 0,
+      "modifiers": {"fertility_mult": -0.8},
+      "gift_effect": {"trait": "chaste", "relation": "spouse", "stress": 5}
+    },
+    "incense": {
+      "slot": "armor",
+      "rarity": "common",
+      "durability": 1,
+      "reforgeable": false,
+      "destroy_gold": 0,
+      "modifiers": {
+        "fertility_mult": 1.0,
+        "health_decay_mult": 2.0,
+        "stress_gain_mult": 2.0,
+        "stress_gain_mult_trait": "chaste"
+      }
+    }
+  }
+}

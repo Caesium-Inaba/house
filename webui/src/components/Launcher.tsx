@@ -142,6 +142,7 @@ export default function Launcher() {
               maxOrder={enabled.length - 1}
               onToggle={toggle}
               onMove={move}
+              lang={lang}
             />
           ))}
         </div>
@@ -150,13 +151,14 @@ export default function Launcher() {
   )
 }
 
-function ModCard({ m, on, order, maxOrder, onToggle, onMove }: {
+function ModCard({ m, on, order, maxOrder, onToggle, onMove, lang }: {
   m: LauncherModInfo
   on: boolean
   order: number
   maxOrder: number
   onToggle: (folder: string) => void
   onMove: (folder: string, dir: -1 | 1) => void
+  lang: 'zh' | 'en'
 }) {
   return (
     <div className={`l-mod ${on ? 'on' : ''} ${m.valid ? '' : 'bad'}`}>
@@ -167,7 +169,7 @@ function ModCard({ m, on, order, maxOrder, onToggle, onMove }: {
       </div>
       <div className="l-mod-info">
         <div className="l-mod-name">
-          {m.name}
+          {lang === 'en' && m.name_en ? m.name_en : m.name}
           {on && order >= 0 && <span className="l-mod-order"> · {t('launcher.load_n', { n: order + 1 })}</span>}
         </div>
         <div className="l-mod-sub">

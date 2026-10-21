@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../i18n'
+import { SHOW_TREE_TOOLBAR } from '../featureFlags'
 import { useStore } from '../store'
 import type { CharacterInfo } from '../types'
 
@@ -119,8 +120,14 @@ export default function FamilyTree() {
         <span className="panel-title">{dynName} · {t('tree.title')}</span>
         <span className="panel-sub">{t('tree.hint')}</span>
         <div className="btn-group" style={{ marginLeft: 'auto' }}>
-          <button className="btn ghost" onClick={fit}>{t('tree.overview')}</button>
-          <button className="btn ghost" onClick={() => focusOn(snap.player_id)}>{t('tree.focus_head')}</button>
+          {/* 「全览」「回到家主」已从 UI 移除；fit()/focusOn() 保留，
+              SHOW_TREE_TOOLBAR 置 true 可恢复按钮。 */}
+          {SHOW_TREE_TOOLBAR && (
+            <>
+              <button className="btn ghost" onClick={fit}>{t('tree.overview')}</button>
+              <button className="btn ghost" onClick={() => focusOn(snap.player_id)}>{t('tree.focus_head')}</button>
+            </>
+          )}
           <button className="btn ghost" onClick={() => setTreeOpen(false)}>{t('tree.close')}</button>
         </div>
       </div>

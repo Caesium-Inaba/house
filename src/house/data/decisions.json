@@ -1,0 +1,22 @@
+{
+  "_comment": "决议定义（按 id 的 dict，模组可在同名文件里按键新增/覆盖）。字段：group/stress?/cost?/gain?/health?/opinion_all?/requires?/cd/buy_artifact?",
+  "decisions": {
+    "hunt": {"group": "generic", "stress": 25, "cost": {"money": 30}, "gain": {"prestige": 10}, "cd": 365},
+    "feast": {"group": "generic", "stress": 40, "cost": {"money": 50, "prestige": 20}, "cd": 730},
+    "pilgrimage": {"group": "generic", "stress": 30, "cost": {"money": 40}, "gain": {"piety": 25}, "cd": 1095},
+    "meditate": {"group": "generic", "stress": 10, "cd": 180},
+    "coping_drink": {"group": "coping", "requires": "drunkard", "stress": 20, "cost": {"prestige": 150}, "cd": 1095},
+    "coping_food": {"group": "coping", "requires": "comfort_eater", "stress": 20, "cost": {"money": 20}, "cd": 1095},
+    "coping_seclude": {"group": "coping", "requires": "reclusive", "stress": 20, "cost": {"prestige": 150}, "cd": 1095},
+    "coping_confide": {"group": "coping", "requires": "confider", "stress": 20, "opinion_all": -5, "cd": 1095},
+    "coping_workout": {"group": "coping", "requires": "athletic", "stress": 20, "opinion_all": -5, "cd": 1095},
+    "coping_flagellate": {"group": "coping", "requires": "flagellant", "stress": 40, "health": -0.2, "cd": 1095},
+    "coping_lash_out": {"group": "coping", "requires": "irritable", "stress": 20, "opinion_all": -5, "cd": 1095},
+    "coping_confess": {"group": "coping", "requires": "contrite", "stress": 20, "gain": {"piety": 10}, "cd": 1095},
+    "coping_shun_food": {"group": "coping", "requires": "inappetetic", "stress": 20, "cd": 1095},
+    "coping_charity": {"group": "coping", "requires": "improvident", "stress": 20, "cost": {"money": 20}, "gain": {"piety": 25}, "cd": 1095},
+    "coping_brothel": {"group": "coping", "requires": "rakish", "stress": 20, "cost": {"money": 25}, "cd": 1095},
+    "coping_market": {"group": "coping", "requires": "profligate", "stress": 20, "cd": 1095},
+    "coping_journal": {"group": "coping", "requires": "journaller", "stress": 20, "cd": 1095}
+  }
+}

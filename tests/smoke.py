@@ -277,7 +277,151 @@ def main() -> None:
     test_rename_events()
     test_mods_overlay()
     test_stress()
+    test_artifacts_mod()
+    test_guardian_lifecycle()
+    test_rename_dynasty()
     print("\n全部冒烟测试通过 ✓")
+
+
+
+
+def test_artifacts_mod() -> None:
+    """宝物系统 + 「计划生育」模组：购买/同槽互斥/效果/赠予/耐久/销毁/传承。"""
+    import shutil
+    from pathlib import Path
+
+    from house.core import artifacts, decisions, inheritance
+    from house.core import traits as T
+    from house.core import mods as M
+    from house.core import health
+
+    repo = Path(__file__).resolve().parent.parent
+    src_mod = repo / "mods" / "perfect-f-word"
+    assert src_mod.is_dir(), f"缺少模组目录：{src_mod}"
+    cwd = Path.cwd()
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
+        os.chdir(td)
+        shutil.copytree(src_mod, Path("mods") / "perfect-f-word")
+        M.save_config(["perfect-f-word"])
+        T.reload_data()
+
+        # 定义与本地化来自模组
+        assert "condom" in artifacts.defs() and "incense" in artifacts.defs()
+        assert artifacts.slot_of("condom") == "armor"
+        assert artifacts.rarity_of("condom") == "common"
+        assert artifacts.max_durability("condom") == 1
+        assert not (artifacts.definition("condom") or {}).get("reforgeable", True)
+        from house import i18n
+        assert i18n.t("artifact.condom.name") == "避孕套"
+
+        world = build_default_world(7)
+        player = world.player
+        spouse = world.get(player.spouse)
+        player.money = 100.0
+
+        # 决议购买：10 金、无冷却、自动装备空槽
+        ok, key = decisions.apply(world, player, "buy_condom")
+        assert ok, key
+        assert player.money == 90.0
+        condom = next(a for a in player.artifacts if a["def"] == "condom")
+        assert player.equipped.get("armor") == condom["uid"]
+        assert abs(artifacts.fertility_multiplier(player) - 0.2) < 1e-9
+
+        ok, key = decisions.apply(world, player, "buy_incense")
+        assert ok, key and player.money == 80.0
+        incense = next(a for a in player.artifacts if a["def"] == "incense")
+        assert player.equipped.get("armor") == condom["uid"], "同槽不应自动替换"
+
+        # 装备暖情香：受孕 ×2、健康流逝 ×2；忠贞者压力增益 ×2
+        assert artifacts.equip(world, player, incense["uid"])
+        assert artifacts.fertility_multiplier(player) == 2.0
+        assert artifacts.health_decay_multiplier(player) == 2.0
+        assert artifacts.stress_gain_multiplier(player) == 1.0
+        player.traits.add("chaste")
+        assert artifacts.stress_gain_multiplier(player) == 2.0
+        player.traits.discard("chaste")
+
+        # 赠予避孕套给忠贞配偶：其压力 −5
+        spouse.traits.add("chaste")
+        spouse.stress = 20.0
+        ok, key = artifacts.gift(world, player, spouse, condom["uid"])
+        assert ok, key
+        assert spouse.stress == 15.0
+        assert any(a["def"] == "condom" for a in spouse.artifacts)
+
+        # 非忠贞配偶不减压
+        spouse.traits.discard("chaste")
+        spouse.stress = 40.0
+        ok, key = decisions.apply(world, player, "buy_condom")
+        assert ok, key
+        condom2 = next(a for a in player.artifacts if a["def"] == "condom")
+        ok, key = artifacts.gift(world, player, spouse, condom2["uid"])
+        assert ok and spouse.stress == 40.0
+
+        # 耐久 1：年度结算后全部损毁
+        artifacts.annual_decay(world)
+        assert not any(a["def"] == "incense" for a in player.artifacts)
+        assert not any(a["def"] == "condom" for a in spouse.artifacts)
+
+        # 销毁不返金
+        player.money = 50.0
+        ok, key = decisions.apply(world, player, "buy_condom")
+        assert ok, key and player.money == 40.0
+        inst = next(a for a in player.artifacts if a["def"] == "condom")
+        before = player.money
+        ok, gold = artifacts.destroy(world, player, inst["uid"])
+        assert ok and gold == 0.0 and player.money == before
+
+        # 死亡传承：宝物交给第一继承人
+        ok, key = decisions.apply(world, player, "buy_condom")
+        assert ok, key
+        heir = inheritance.find_heir(world, player)
+        assert heir is not None
+        artifacts.transfer_on_death(world, player)
+        assert not player.artifacts
+        assert any(a["def"] == "condom" for a in heir.artifacts)
+        assert heir.equipped.get("armor") is not None
+
+        M.save_config([])
+        T.reload_data()
+        assert "condom" not in artifacts.defs(), "关闭模组后定义应回滚"
+        os.chdir(cwd)
+    T.reload_data()
+    print("[artifacts] OK  购买/同槽/效果/赠予/耐久/销毁/传承，模组回滚正常")
+
+
+def test_guardian_lifecycle() -> None:
+    """监护：更换、监护人死亡清除、被监护人成年清除。"""
+    from house.core import genetics, health
+
+    world = build_default_world(3)
+    child = world.get(3)
+    guardian = world.get(11)
+    assert child is not None and guardian is not None and not child.is_adult
+
+    child.guardian = guardian.id
+    assert child.guardian == guardian.id
+    health.kill(world, guardian, "disease")
+    assert child.guardian is None, "监护人死亡后不应保留关系"
+
+    child.guardian = world.player.id
+    genetics.finalize_education(world, child)
+    assert child.guardian is None, "成年后不应保留关系"
+    print("[guardian] OK  死亡清除/成年清除")
+
+
+def test_rename_dynasty() -> None:
+    """宗族改名同步历史事件文本与参数。"""
+    world = build_default_world(4)
+    player = world.player
+    dyn = world.dynasties[player.dynasty]
+    old = dyn.name
+    world.add_event("pregnancy", "event.pregnancy", {"dynasty": old, "mother": "某人"}, [player.id])
+    world.rename_dynasty(dyn.id, "试验宗族")
+    assert dyn.name == "试验宗族"
+    ev = world.events[-1]
+    assert ev["params"]["dynasty"] == "试验宗族"
+    print("[dynasty rename] OK  宗族名与事件参数同步")
 
 
 if __name__ == "__main__":

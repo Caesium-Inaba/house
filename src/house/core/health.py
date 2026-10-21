@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .. import balance as B
 from .. import i18n
+from . import artifacts
 from . import stress
 from .models import Character
 from .world import World
@@ -49,6 +50,12 @@ def kill(world: World, char: Character, reason: str) -> None:
         "death", "event.death", {"name": char.name, "age": char.age, "reason": reason}, [char.id]
     )
     stress.grief_on_death(world, char)
+    # 监护人离世：不再保留任何指向他的监护关系
+    for other in world.alive():
+        if other.guardian == char.id:
+            other.guardian = None
+    # 宝物交给第一继承人（无继承人则消失）
+    artifacts.transfer_on_death(world, char)
 
 
 def annual_person(world: World, char: Character) -> None:
@@ -66,7 +73,7 @@ def annual_person(world: World, char: Character) -> None:
     if age >= B.HEALTH_LOSS_START_AGE:
         chance = B.HEALTH_LOSS_CHANCE + (age - B.HEALTH_LOSS_START_AGE) * B.HEALTH_LOSS_CHANCE_INCREMENT
         if world.rng.random() < chance:
-            char.health -= B.HEALTH_LOSS_AMOUNT
+            char.health -= B.HEALTH_LOSS_AMOUNT * artifacts.health_decay_multiplier(char)
     if age >= B.PROWESS_LOSS_START_AGE:
         chance = B.PROWESS_LOSS_CHANCE + (age - B.PROWESS_LOSS_START_AGE) * B.PROWESS_LOSS_CHANCE_INCREMENT
         if world.rng.random() < chance:

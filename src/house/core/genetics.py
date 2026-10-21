@@ -445,6 +445,7 @@ def finalize_education(world: World, child: Character) -> None:
         B.ATTR_KEYS[:-1], key=lambda k: child.potential.get(k, 0)
     )  # 兜底：按潜力选择（不含勇武）
     child.education = f"edu_{route}_{level}"
+    child.guardian = None  # 成年后不再保留监护关系
     world.tutoring_queue = [e for e in world.tutoring_queue if e.get("child_id") != child.id]
     world.trait_queue = [e for e in world.trait_queue if e.get("child_id") != child.id]
     # ── 童年特质成年转换（CK3：childhood → personality） ──

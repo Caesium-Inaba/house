@@ -20,6 +20,7 @@ class World:
     player_id: Optional[int] = None
     next_char_id: int = 1
     next_dynasty_id: int = 1
+    next_artifact_uid: int = 1
     rng: random.Random = field(default_factory=random.Random)
     log: list[str] = field(default_factory=list)
     # 结构化事件流（WebUI 消费）：{year, month, day, type, text, actors}
@@ -153,6 +154,21 @@ class World:
         for entry in self.naming_queue:
             if entry.get("child_id") == cid and entry.get("suggested") == old:
                 entry["suggested"] = new_name
+
+    def rename_dynasty(self, dynasty_id: int, new_name: str) -> None:
+        """宗族改名（家主操作）：同步历史事件里该宗族名的文本与参数。"""
+        dyn = self.dynasties.get(dynasty_id)
+        if dyn is None or not new_name or dyn.name == new_name:
+            return
+        old = dyn.name
+        dyn.name = new_name
+        for e in self.events:
+            params = e.get("params")
+            if isinstance(params, dict) and params.get("dynasty") == old:
+                params["dynasty"] = new_name
+                text = e.get("text")
+                if isinstance(text, str) and old in text:
+                    e["text"] = text.replace(old, new_name)
 
     def dynasty_name_of(self, cid: Optional[int]) -> str:
         ch = self.get(cid)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .. import balance as B
-from . import fertility, genetics, health, inheritance, legacy, marriage, opinion, queues
+from . import artifacts, fertility, genetics, health, inheritance, legacy, marriage, opinion, queues
 from . import traits as T
 from .world import World
 
@@ -19,6 +19,7 @@ def tick_day(world: World) -> None:
         monthly_settlement(world)
     if rolled_year:
         _yearly_resources(world)
+        artifacts.annual_decay(world)
 
     fertility.daily_settlement(world)
     birthday_settlement(world)

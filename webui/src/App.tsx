@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect } from 'react'
 import { useStore, tickTime, SPEED_INTERVALS } from './store'
+import { SHOW_MANUAL_TICK } from './featureFlags'
 import TopBar from './components/TopBar'
 import CharacterDrawer from './components/CharacterDrawer'
 import Chronicle from './components/Chronicle'
@@ -61,7 +62,8 @@ export default function App() {
           st.setAuto(!st.auto)
           break
         case 'KeyY':
-          void tickTime('year')
+          // 手动推进已从 UI 移除（Y=推一年），实现保留，开关打开可恢复
+          if (SHOW_MANUAL_TICK) void tickTime('year')
           break
         case 'KeyA':
           st.setAuto(!st.auto)

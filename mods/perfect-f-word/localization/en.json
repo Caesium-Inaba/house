@@ -1,0 +1,13 @@
+{
+  "decisions.group.artifact": "Family Planning",
+  "artifact.condom.name": "Condom",
+  "artifact.condom.desc": "Thin sheepgut, a barrier against conception. Spent after a single year of use.",
+  "artifact.incense.name": "Warming Incense",
+  "artifact.incense.desc": "Its smoke stirs desire and quickens the womb, yet hastens the wear of the body; the chaste find their hearts harder to quiet.",
+  "decision.buy_condom.name": "Buy a Condom",
+  "decision.buy_incense.name": "Buy Warming Incense",
+  "artifact.effect.fertility": "Fertility",
+  "artifact.effect.health_decay": "Health decay",
+  "artifact.effect.stress_gain": "Stress gain",
+  "artifact.effect.gift_stress": "Gifting to a {trait} {relation}: their stress −{n}"
+}

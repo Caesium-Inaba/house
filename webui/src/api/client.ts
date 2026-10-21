@@ -56,6 +56,16 @@ export const api = {
   stressBreak: (char_id: number, trait: string | null): Promise<ApiResponse> =>
     post('/api/stressbreak', { char_id, trait }),
   dismissNotice: (kind: string): Promise<ApiResponse> => post('/api/notice/dismiss', { kind }),
+  artifactEquip: (uid: number): Promise<ApiResponse> => post('/api/artifact/equip', { uid }),
+  artifactUnequip: (uid: number): Promise<ApiResponse> => post('/api/artifact/unequip', { uid }),
+  artifactDestroy: (uid: number): Promise<ApiResponse> => post('/api/artifact/destroy', { uid }),
+  artifactReforge: (uid: number): Promise<ApiResponse> => post('/api/artifact/reforge', { uid }),
+  artifactGift: (uid: number, target_id: number): Promise<ApiResponse> =>
+    post('/api/artifact/gift', { uid, target_id }),
+  setGuardian: (child_id: number, guardian_id: number | null): Promise<ApiResponse> =>
+    post('/api/guardian', { child_id, guardian_id }),
+  renameSelf: (name: string): Promise<ApiResponse> => post('/api/rename_self', { name }),
+  renameDynasty: (name: string): Promise<ApiResponse> => post('/api/dynasty/rename', { name }),
 }
 
 /* ── 启动器（模组管理） ── */
